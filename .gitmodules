@@ -1,0 +1,7 @@
+[submodule "live555"]
+	path = live555
+	url = https://github.com/melchi45/live555.git
+
+[submodule "sdl2"]
+	path = sdl2
+	url = https://github.com/icebreaker/sdl2.git
