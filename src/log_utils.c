@@ -52,8 +52,25 @@
 #endif
 #include <time.h>
 
-#include "bool.h"
 #include "log_utils.h"
+
+#ifndef BOOL_H_
+#define BOOL_H_
+
+ /** Boolean data type which is so natural for all programmers. */
+typedef int BOOL;
+
+#ifndef TRUE
+/** That's @a true. */
+#define TRUE 1
+#endif
+
+#ifndef FALSE
+/** This is @a false. */
+#define FALSE 0
+#endif
+
+#endif /* BOOL_H_ */
 
 /** @name Logging to @a stdout
  * @{ */
@@ -279,7 +296,10 @@ void log_usePrintf()
 {
     _use_syslog = FALSE;
     // close syslog connection if it was opened
+
+#ifndef WIN32
     closelog();
+#endif
     setPrintf();
 }
 
@@ -297,7 +317,9 @@ void log_useSyslog(int facility) {}
 void log_closeSyslog()
 {
 	// close syslog connection if it was opened
+#ifndef WIN32
 	closelog();
+#endif
 }
 
 void log_setLevel(LOG_LEVEL level)
