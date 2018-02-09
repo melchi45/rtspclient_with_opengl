@@ -5,3 +5,11 @@
 [submodule "sdl2"]
 	path = sdl2
 	url = https://github.com/icebreaker/sdl2.git
+
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/Microsoft/vcpkg.git
+
+[submodule "cmake"]
+	path = cmake
+	url = https://github.com/snikulov/cmake-modules.git

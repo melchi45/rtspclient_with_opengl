@@ -35,8 +35,10 @@ extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/mathematics.h"
-#include "libavutil/old_pix_fmts.h"
+//#include "libavutil/old_pix_fmts.h"
 #include "libswscale/swscale.h"
+
+#include "SDL2/SDL.h"
 
 #define INBUF_SIZE 4096
 #define AUDIO_INBUF_SIZE 20480
@@ -205,9 +207,10 @@ private: //FFMPEG
 	AVPacket avpkt;
 
 private: //SDL
-	SDL_Surface * screen;
-	SDL_Overlay *bmp;
-	SDL_Rect rect;
+	SDL_Event event;
+	SDL_Window *screen;
+	SDL_Renderer *renderer;
+	SDL_Texture *texture;
 };
 
 #define RTSP_CLIENT_VERBOSITY_LEVEL 1 // by default, print verbose output from each "RTSPClient"
@@ -616,24 +619,54 @@ DummySink::DummySink(UsageEnvironment& env, MediaSubsession& subsession, char co
 		exit(10);
 	}
 
-
+	/*
 	screen = SDL_SetVideoMode(
 		c->width,
 		c->height,
 		24,
 		0
+	);*/
+
+	// Make a screen to put our video
+	screen = SDL_CreateWindow(
+		"FFmpeg Tutorial",
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		c->width,
+		c->height,
+		0
 	);
+
 	if (!screen) {
 		envir() << "SDL: could not set video mode - exiting\n";
 		exit(11);
 	}
 
+	renderer = SDL_CreateRenderer(screen, -1, 0);
+	if (!renderer) {
+		fprintf(stderr, "SDL: could not create renderer - exiting\n");
+		exit(1);
+	}
+	/*
 	bmp = SDL_CreateYUVOverlay(
 		c->width,
 		c->height,
 		SDL_YV12_OVERLAY,
 		screen
 	);
+	*/
+	// Allocate a place to put our YUV image on that screen
+	texture = SDL_CreateTexture(
+		renderer,
+		SDL_PIXELFORMAT_YV12,
+		SDL_TEXTUREACCESS_STREAMING,
+		c->width,
+		c->height
+	);
+	if (!texture) {
+		fprintf(stderr, "SDL: could not create texture - exiting\n");
+		exit(1);
+	}
 }
 
 DummySink::~DummySink() {
@@ -779,7 +812,7 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 				//			exit(6);
 			}
 			if (got_picture) {
-				// do something with it
+/*				// do something with it
 				SDL_LockYUVOverlay(bmp);
 
 				AVPicture pict;
@@ -824,8 +857,8 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 				rect.h = c->height;
 				SDL_DisplayYUVOverlay(bmp, &rect);
 
-
-				/*
+*/
+				
 				char fname[256]={0};
 				sprintf(fname, "OriginalYUV%d.pgm",frame);
 				pgm_save (
@@ -835,9 +868,10 @@ void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes
 				c->height,
 				fname
 				);
-				*/
+/*		
 				sws_freeContext(sws);
 				frame++;
+*/
 			}
 			else {
 				envir() << "no picture :( !\n";
