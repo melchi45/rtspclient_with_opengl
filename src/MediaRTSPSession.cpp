@@ -134,7 +134,7 @@ int MediaRTSPSession::openURL(UsageEnvironment& env)
 	}
 
 	if (!bTransportStream) {
-		((MediaRTSPClient*)m_rtspClient)->setUpTransportStream(true);
+		((MediaRTSPClient*)m_rtspClient)->setUpTransportStream(false);
 		//	((MediaRTSPClient*)m_rtspClient)->m_nID = m_nID;
 		// Next, send a RTSP "DESCRIBE" command, to get a SDP description for the stream.
 		// Note that this command - like all RTSP commands - is sent asynchronously; we do not block, waiting for a response.

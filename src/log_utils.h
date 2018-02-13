@@ -1,48 +1,3 @@
-/*******************************************************************************
- *  Copyright (c) 2016 Hanwha Techwin Co., Ltd.
- *
- *  Licensed to the Hanwha Techwin Software Foundation under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *  Smart Home Camera - Hanwha B2C Action Cam Project
- *  http://www.samsungsmartcam.com
- *
- *  Security Solution Division / Smart Home Camera SW Dev. Group
- *  B2C Action Camera SW Dev. Group
- *
- *  @file
- *  Contains implementation of logging tools.
- *
- *  $Author: young_ho_kim $
- *  $LastChangedBy: young_ho_kim $
- *  $Date: 2016-08-19 16:44:07 +0900 (Fri, 19 Aug 2016) $
- *  $Revision: 2352 $
- *  $Id: log_utils.h 2352 2016-08-19 07:44:07Z young_ho_kim $
- *  $HeadURL: http://ctf1.stw.net/svn/repos/wearable_camera/trunk/Source/Pixcam/Wear-1.0.5/app/dm/log/log_utils.h $
- *******************************************************************************
-
-  MODULE NAME:
-
-  REVISION HISTORY:
-
-  Date        Ver Name                    Description
-  ----------  --- --------------------- -----------------------------------------
-  04-Jun-2016 0.1 Youngho Kim             Created
- ...............................................................................
-
-  DESCRIPTION:
-
-
- ...............................................................................
- *******************************************************************************/
-
 #ifndef LOG_UTILS_H_
 #define LOG_UTILS_H_
 
@@ -108,8 +63,7 @@ extern log_function log_errorHandler;
  *
  * @param fmt Message format (used in the same way as with @a printf()).
  */
-#define log_rtsp(fmt, ...) (*log_rtspHandler)((char*)"%s(%d): " fmt, __FILE__, \
- __LINE__, ## __VA_ARGS__)
+#define log_rtsp(fmt, ...) (*log_rtspHandler)((char*)"%s" fmt, ## __VA_ARGS__)
 
 /**
  * Prints @a info message to the configured output.

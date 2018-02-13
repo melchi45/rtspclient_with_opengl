@@ -3,9 +3,16 @@
 #include "MediaRTSPSession.h"
 #include "log_utils.h"
 
+#ifdef WIN32
+#include <windows.h>	//for using the function Sleep
+#else
+#include <stdlib.h>     //for using the function sleep
+#endif
+
 //char eventLoopWatchVariable = 0;
 char* username = NULL;
 char* password = NULL;
+char* rtsp_url = NULL;
 char* filename = NULL;
 bool bUpStream = false;
 bool bInterleaved = false;
@@ -31,10 +38,14 @@ int main(int argc, char** argv) {
 	while (argc > 2) {
 		char* const opt = argv[1];
 
-		if (opt[0] != '-')
+		if (opt[0] != '-') {
 			usage(argv[0]);
+		}
 
 		switch (opt[1]) {
+		case 'r':
+			rtsp_url = argv[2];
+			break;
 		case 'U':
 			// specify start port number
 			bUpStream = true;
@@ -67,13 +78,23 @@ int main(int argc, char** argv) {
 	signal(SIGSEGV, _signalHandlerShutdown);
 
 	pRtsp->setDebugLevel(1);
-	if (pRtsp->startRTSPClient("MyClient", "rtsp://192.168.123.37/profile5/media.smp", username, password, bInterleaved, bUpStream))
+	if (pRtsp->startRTSPClient("MyClient", rtsp_url, username, password, bInterleaved, bUpStream))
 	{
 		delete pRtsp;
 		pRtsp = NULL;
 
 		return -1;
 	}
+
+	while (true) {
+#ifdef WIN32
+		Sleep(5000);         // wait for 5 secondes before closing
+#else
+		sleep(5000);         // wait for 5 secondes before closing
+#endif
+	}
+
+	return 0;
 }
 
 void _signalHandlerShutdown(int sig)

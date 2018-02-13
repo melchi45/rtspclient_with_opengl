@@ -1,58 +1,24 @@
-/*******************************************************************************
- *  Copyright (c) 2016 Hanwha Techwin Co., Ltd.
- *
- *  Licensed to the Hanwha Techwin Software Foundation under one or more
- *  contributor license agreements.  See the NOTICE file distributed with
- *  this work for additional information regarding copyright ownership.
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- *
- *  Smart Home Camera - Hanwha B2C Action Cam Project
- *  http://www.samsungsmartcam.com
- *
- *  Security Solution Division / Smart Home Camera SW Dev. Group
- *  B2C Action Camera SW Dev. Group
- *
- *  @file
- *  Contains implementation of logging tools.
- *
- *  $Author: young_ho_kim $
- *  $LastChangedBy: young_ho_kim $
- *  $Date: 2016-08-19 16:44:07 +0900 (Fri, 19 Aug 2016) $
- *  $Revision: 2352 $
- *  $Id: log_utils.c 2352 2016-08-19 07:44:07Z young_ho_kim $
- *  $HeadURL: http://ctf1.stw.net/svn/repos/wearable_camera/trunk/Source/Pixcam/Wear-1.0.5/app/dm/log/log_utils.c $
- *******************************************************************************
-
-  MODULE NAME:
-
-  REVISION HISTORY:
-
-  Date        Ver Name                    Description
-  ----------  --- --------------------- -----------------------------------------
-  04-Jun-2016 0.1 Youngho Kim             Created
- ...............................................................................
-
-  DESCRIPTION:
-
-
- ...............................................................................
- *******************************************************************************/
-
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #ifndef WIN32
 #include <syslog.h>
+#include <sys/time.h>
+#else
+#include <process.h>
+#include <windows.h>
 #endif
 #include <time.h>
 
 #include "log_utils.h"
+
+#ifdef WIN32
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+#else
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define _snprintf snprintf
+#endif
 
 #ifndef BOOL_H_
 #define BOOL_H_
@@ -108,56 +74,394 @@ static BOOL _use_syslog = FALSE;
 /** Logs info message using printf. */
 static void log_rtspPrintf(char* fmt, ...)
 {
-    printf(ANSI_COLOR_CYAN "[%5.6f TRANSPORT_STREAM:INFO] ", ((double)clock())/CLOCKS_PER_SEC);
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    printf(ANSI_COLOR_RESET "\n");
+	char szOut[4096];
+	size_t nMaxBufLen = sizeof(szOut);
+	size_t nRemainBufLen = nMaxBufLen;
+	memset(szOut, 0, nMaxBufLen);
+	unsigned int nLen = 0;
+
+	// 시간, 프로세스 정보 등 조합
+#ifdef _WIN32
+	SYSTEMTIME	stime;
+	GetLocalTime(&stime);
+
+	nLen = _snprintf_s(szOut, _countof(szOut), _TRUNCATE, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in [0x%08X]  ", "[rtsp]", stime.wYear, stime.wMonth, stime.wDay, stime.wHour, stime.wMinute, stime.wSecond, stime.wMilliseconds, GetCurrentThreadId());
+#else
+	struct tm t;
+	time_t ct = time(NULL);
+	localtime_r(&ct, &t);
+	timeval tmv;
+	gettimeofday(&tmv, NULL);
+
+	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in [%d:%08X]  ", "[rtsp]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, getpid(), pthread_mach_thread_np(pthread_self()));
+#endif
+	// flush string offset
+	if (nLen == -1) {
+		return;
+	}
+	else if (nRemainBufLen >= nLen) {
+		nRemainBufLen -= (size_t)nLen;
+	}
+	else {
+		nRemainBufLen = 0;
+	}
+
+	if (nRemainBufLen > 0) {
+		// format부터 조합
+		va_list args;
+		va_start(args, fmt);
+		nLen = vsnprintf(szOut + nLen, nRemainBufLen, fmt, args);
+		va_end(args);
+
+		if (nLen == -1) {
+			return;
+		}
+		else if (nRemainBufLen >= nLen) {
+			nRemainBufLen -= (size_t)nLen;
+		}
+		else {
+			nRemainBufLen = 0;
+		}
+	}
+
+	// 조합 마무리
+	if (nRemainBufLen >= 2) {
+//		szOut[nMaxBufLen - nRemainBufLen] = '\n';
+		szOut[nMaxBufLen - nRemainBufLen + 1] = 0;
+	}
+	szOut[nMaxBufLen - 1] = 0;
+
+#if (!defined(_WIN32) || !defined(_WIN64)) && ((defined(__APPLE__) && defined(__MACH__)))
+	NSString *str = [[NSString alloc] initWithUTF8String:szOut];
+	NSLog(@"%@", str);
+	[str release];
+#elif defined(WIN32) || defined(WIN64)
+#ifdef _CONSOLE
+	fprintf(stderr, "%s", szOut);
+#else
+	OutputDebugString(szOut);
+#endif
+#else // defined(__unix__) || defined(__unix) || defined(__linux__) || defined(__linux)
+	printf(ANSI_COLOR_GREEN "[%5.6f TRANSPORT_STREAM:INFO] ", ((double)clock()) / CLOCKS_PER_SEC);
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#endif
 }
 
 /** Logs info message using printf. */
 static void log_infoPrintf(char* fmt, ...)
 {
-    printf(ANSI_COLOR_GREEN "[%5.6f TRANSPORT_STREAM:INFO] ", ((double)clock())/CLOCKS_PER_SEC);
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    printf(ANSI_COLOR_RESET "\n");
+	char szOut[4096];
+	size_t nMaxBufLen = sizeof(szOut);
+	size_t nRemainBufLen = nMaxBufLen;
+	memset(szOut, 0, nMaxBufLen);
+	unsigned int nLen = 0;
+
+	// 시간, 프로세스 정보 등 조합
+#ifdef _WIN32
+	SYSTEMTIME	stime;
+	GetLocalTime(&stime);
+
+	nLen = _snprintf_s(szOut, _countof(szOut), _TRUNCATE, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[0x%08X]  ", "[info]", stime.wYear, stime.wMonth, stime.wDay, stime.wHour, stime.wMinute, stime.wSecond, stime.wMilliseconds, __FILENAME__, __LINE__, __FUNCTION__, GetCurrentThreadId());
+#else
+	struct tm t;
+	time_t ct = time(NULL);
+	localtime_r(&ct, &t);
+	timeval tmv;
+	gettimeofday(&tmv, NULL);
+
+	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[info]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
+#endif
+	// flush string offset
+	if (nLen == -1) {
+		return;
+	}
+	else if (nRemainBufLen >= nLen) {
+		nRemainBufLen -= (size_t)nLen;
+	}
+	else {
+		nRemainBufLen = 0;
+	}
+
+	if (nRemainBufLen > 0) {
+		// format부터 조합
+		va_list args;
+		va_start(args, fmt);
+		nLen = vsnprintf(szOut + nLen, nRemainBufLen, fmt, args);
+		va_end(args);
+
+		if (nLen == -1) {
+			return;
+		}
+		else if (nRemainBufLen >= nLen) {
+			nRemainBufLen -= (size_t)nLen;
+		}
+		else {
+			nRemainBufLen = 0;
+		}
+	}
+
+	// 조합 마무리
+	if (nRemainBufLen >= 2) {
+		szOut[nMaxBufLen - nRemainBufLen] = '\n';
+		szOut[nMaxBufLen - nRemainBufLen + 1] = 0;
+	}
+	szOut[nMaxBufLen - 1] = 0;
+
+#if (!defined(_WIN32) || !defined(_WIN64)) && ((defined(__APPLE__) && defined(__MACH__)))
+	NSString *str = [[NSString alloc] initWithUTF8String:szOut];
+	NSLog(@"%@", str);
+	[str release];
+#elif defined(WIN32) || defined(WIN64)
+#ifdef _CONSOLE
+	printf(ANSI_COLOR_GREEN "");
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#else
+	OutputDebugString(szOut);
+#endif
+#else // defined(__unix__) || defined(__unix) || defined(__linux__) || defined(__linux)
+	printf(ANSI_COLOR_GREEN "[%5.6f TRANSPORT_STREAM:INFO] ", ((double)clock()) / CLOCKS_PER_SEC);
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#endif
 }
 
 /** Logs debug message using printf. */
 static void log_debugPrintf(char* fmt, ...)
 {
-    printf(ANSI_COLOR_BLUE "[%5.6f TRANSPORT_STREAM:DEBUG] ", ((double)clock())/CLOCKS_PER_SEC);
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    printf(ANSI_COLOR_RESET "\n");
+	char szOut[4096];
+	size_t nMaxBufLen = sizeof(szOut);
+	size_t nRemainBufLen = nMaxBufLen;
+	memset(szOut, 0, nMaxBufLen);
+	unsigned int nLen = 0;
+
+	// 시간, 프로세스 정보 등 조합
+#ifdef _WIN32
+	SYSTEMTIME	stime;
+	GetLocalTime(&stime);
+
+	nLen = _snprintf_s(szOut, _countof(szOut), _TRUNCATE, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[0x%08X]  ", "[debug]", stime.wYear, stime.wMonth, stime.wDay, stime.wHour, stime.wMinute, stime.wSecond, stime.wMilliseconds, __FILENAME__, __LINE__, __FUNCTION__, GetCurrentThreadId());
+#else
+	struct tm t;
+	time_t ct = time(NULL);
+	localtime_r(&ct, &t);
+	timeval tmv;
+	gettimeofday(&tmv, NULL);
+
+	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[debug]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
+#endif
+	// flush string offset
+	if (nLen == -1) {
+		return;
+	}
+	else if (nRemainBufLen >= nLen) {
+		nRemainBufLen -= (size_t)nLen;
+	}
+	else {
+		nRemainBufLen = 0;
+	}
+
+	if (nRemainBufLen > 0) {
+		// format부터 조합
+		va_list args;
+		va_start(args, fmt);
+		nLen = vsnprintf(szOut + nLen, nRemainBufLen, fmt, args);
+		va_end(args);
+
+		if (nLen == -1) {
+			return;
+		}
+		else if (nRemainBufLen >= nLen) {
+			nRemainBufLen -= (size_t)nLen;
+		}
+		else {
+			nRemainBufLen = 0;
+		}
+	}
+
+	// 조합 마무리
+	if (nRemainBufLen >= 2) {
+		szOut[nMaxBufLen - nRemainBufLen] = '\n';
+		szOut[nMaxBufLen - nRemainBufLen + 1] = 0;
+	}
+	szOut[nMaxBufLen - 1] = 0;
+
+#if (!defined(_WIN32) || !defined(_WIN64)) && ((defined(__APPLE__) && defined(__MACH__)))
+	NSString *str = [[NSString alloc] initWithUTF8String:szOut];
+	NSLog(@"%@", str);
+	[str release];
+#elif defined(WIN32) || defined(WIN64)
+#ifdef _CONSOLE
+	printf(ANSI_COLOR_GREEN "");
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#else
+	OutputDebugString(szOut);
+#endif
+#else // defined(__unix__) || defined(__unix) || defined(__linux__) || defined(__linux)
+	printf(ANSI_COLOR_GREEN "[%5.6f TRANSPORT_STREAM:INFO] ", ((double)clock()) / CLOCKS_PER_SEC);
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#endif
 }
 
 /** Logs warning message using printf. */
 static void log_warningPrintf(char* fmt, ...)
 {
-    printf(ANSI_COLOR_MAGENTA "[%5.6f TRANSPORT_STREAM:WARNING] ", ((double)clock())/CLOCKS_PER_SEC);
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    printf(ANSI_COLOR_RESET "\n");
+	char szOut[4096];
+	size_t nMaxBufLen = sizeof(szOut);
+	size_t nRemainBufLen = nMaxBufLen;
+	memset(szOut, 0, nMaxBufLen);
+	unsigned int nLen = 0;
+
+	// 시간, 프로세스 정보 등 조합
+#ifdef _WIN32
+	SYSTEMTIME	stime;
+	GetLocalTime(&stime);
+
+	nLen = _snprintf_s(szOut, _countof(szOut), _TRUNCATE, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[0x%08X]  ", "[warning]", stime.wYear, stime.wMonth, stime.wDay, stime.wHour, stime.wMinute, stime.wSecond, stime.wMilliseconds, __FILENAME__, __LINE__, __FUNCTION__, GetCurrentThreadId());
+#else
+	struct tm t;
+	time_t ct = time(NULL);
+	localtime_r(&ct, &t);
+	timeval tmv;
+	gettimeofday(&tmv, NULL);
+
+	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[warning]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
+#endif
+	// flush string offset
+	if (nLen == -1) {
+		return;
+	}
+	else if (nRemainBufLen >= nLen) {
+		nRemainBufLen -= (size_t)nLen;
+	}
+	else {
+		nRemainBufLen = 0;
+	}
+
+	if (nRemainBufLen > 0) {
+		// format부터 조합
+		va_list args;
+		va_start(args, fmt);
+		nLen = vsnprintf(szOut + nLen, nRemainBufLen, fmt, args);
+		va_end(args);
+
+		if (nLen == -1) {
+			return;
+		}
+		else if (nRemainBufLen >= nLen) {
+			nRemainBufLen -= (size_t)nLen;
+		}
+		else {
+			nRemainBufLen = 0;
+		}
+	}
+
+	// 조합 마무리
+	if (nRemainBufLen >= 2) {
+		szOut[nMaxBufLen - nRemainBufLen] = '\n';
+		szOut[nMaxBufLen - nRemainBufLen + 1] = 0;
+	}
+	szOut[nMaxBufLen - 1] = 0;
+
+#if (!defined(_WIN32) || !defined(_WIN64)) && ((defined(__APPLE__) && defined(__MACH__)))
+	NSString *str = [[NSString alloc] initWithUTF8String:szOut];
+	NSLog(@"%@", str);
+	[str release];
+#elif defined(WIN32) || defined(WIN64)
+#ifdef _CONSOLE
+	printf(ANSI_COLOR_GREEN "");
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#else
+	OutputDebugString(szOut);
+#endif
+#else // defined(__unix__) || defined(__unix) || defined(__linux__) || defined(__linux)
+	printf(ANSI_COLOR_GREEN "[%5.6f TRANSPORT_STREAM:INFO] ", ((double)clock()) / CLOCKS_PER_SEC);
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#endif
 }
 
 /** Logs error message using printf. */
 static void log_errorPrintf(char* fmt, ...)
 {
-    printf(ANSI_COLOR_RED "[%5.6f TRANSPORT_STREAM:ERROR] ",  ((double)clock())/CLOCKS_PER_SEC);
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    printf(ANSI_COLOR_RESET"\n");
+	char szOut[4096];
+	size_t nMaxBufLen = sizeof(szOut);
+	size_t nRemainBufLen = nMaxBufLen;
+	memset(szOut, 0, nMaxBufLen);
+	unsigned int nLen = 0;
+
+	// 시간, 프로세스 정보 등 조합
+#ifdef _WIN32
+	SYSTEMTIME	stime;
+	GetLocalTime(&stime);
+
+	nLen = _snprintf_s(szOut, _countof(szOut), _TRUNCATE, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[0x%08X]  ", "[error]", stime.wYear, stime.wMonth, stime.wDay, stime.wHour, stime.wMinute, stime.wSecond, stime.wMilliseconds, __FILENAME__, __LINE__, __FUNCTION__, GetCurrentThreadId());
+#else
+	struct tm t;
+	time_t ct = time(NULL);
+	localtime_r(&ct, &t);
+	timeval tmv;
+	gettimeofday(&tmv, NULL);
+
+	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[error]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
+#endif
+	// flush string offset
+	if (nLen == -1) {
+		return;
+	}
+	else if (nRemainBufLen >= nLen) {
+		nRemainBufLen -= (size_t)nLen;
+	}
+	else {
+		nRemainBufLen = 0;
+	}
+
+	if (nRemainBufLen > 0) {
+		// format부터 조합
+		va_list args;
+		va_start(args, fmt);
+		nLen = vsnprintf(szOut + nLen, nRemainBufLen, fmt, args);
+		va_end(args);
+
+		if (nLen == -1) {
+			return;
+		}
+		else if (nRemainBufLen >= nLen) {
+			nRemainBufLen -= (size_t)nLen;
+		}
+		else {
+			nRemainBufLen = 0;
+		}
+	}
+
+	// 조합 마무리
+	if (nRemainBufLen >= 2) {
+		szOut[nMaxBufLen - nRemainBufLen] = '\n';
+		szOut[nMaxBufLen - nRemainBufLen + 1] = 0;
+	}
+	szOut[nMaxBufLen - 1] = 0;
+
+#if (!defined(_WIN32) || !defined(_WIN64)) && ((defined(__APPLE__) && defined(__MACH__)))
+	NSString *str = [[NSString alloc] initWithUTF8String:szOut];
+	NSLog(@"%@", str);
+	[str release];
+#elif defined(WIN32) || defined(WIN64)
+#ifdef _CONSOLE
+	printf(ANSI_COLOR_GREEN "");
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#else
+	OutputDebugString(szOut);
+#endif
+#else // defined(__unix__) || defined(__unix) || defined(__linux__) || defined(__linux)
+	printf(ANSI_COLOR_GREEN "[%5.6f TRANSPORT_STREAM:INFO] ", ((double)clock()) / CLOCKS_PER_SEC);
+	printf("%s", szOut);
+	printf(ANSI_COLOR_RESET "\n");
+#endif
 }
 
 /** Logs rtsp message using syslog. */
