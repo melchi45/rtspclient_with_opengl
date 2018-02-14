@@ -9,7 +9,7 @@ set ( TINYLIB tinylib )
 # set DXSDK_DIR=C:\Tools/DXSDK
 # cmake . -Bstatic -G "Visual Studio 15 2017" -DCMAKE_INSTALL_PREFIX=install -DEXTRA_LDFLAGS="vcruntimed.lib;ucrtd.lib"
 # cmake --build static --config Release
-message ( $ENV{DXSDK_DIR} )
+#message ( $ENV{DXSDK_DIR} )
 
 project( ${PROJECT_NAME} )
 
@@ -105,10 +105,10 @@ else()
     message(FATAL_ERROR "FFMPEG not found")
 endif()
 
-find_package(X264 REQUIRED)
-if(X264_FOUND)
-	include_directories(${X264_INCLUDE_DIRS})
-endif()
+#find_package(X264 REQUIRED)
+#if(X264_FOUND)
+#	include_directories(${X264_INCLUDE_DIRS})
+#endif()
 
 #find_package(SDL2 REQUIRED)
 #include_directories(${SDL2_INCLUDE_DIR})

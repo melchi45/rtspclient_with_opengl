@@ -58,12 +58,16 @@ CMake projects should use: "-DCMAKE_TOOLCHAIN_FILE=D:/Tools/vcpkg/scripts/builds
 
 Install any packages for x86, x64, arm, arm64 windows with
 ```
-.\vcpkg install ffmpeg:x64-windows ffmpeg:x86-windows ffmpeg:arm-windows ffmpeg:arm64-winodws sdl2:x64-winodws sdl2:x86-windows sdl2:arm-windows sdl2:arm64-winodws
+.\vcpkg install ffmpeg:x64-windows ffmpeg:x86-windows ffmpeg:arm-windows ffmpeg:arm64-winodws 
+.\vcpkg install sdl2:x64-winodws sdl2:x86-windows sdl2:arm-windows sdl2:arm64-winodws
+.\vcpkg install pthread:x64-winodws pthread:x86-windows pthread:arm-windows pthread:arm64-winodws
+.\vcpkg install glew:x86-windows glew:x64-windows glew:arm-windows glew:arm64-winodws
+.\vcpkg install glfw3:x86-windows glfw3:x64-windows glfw3:arm-windows glfw3:arm64-winodws
+.\vcpkg install zlib:x86-windows zlib:x64-windows zlib:arm-windows zlib:arm64-winodws
 ```
 
 
 Finally, create a New Project (or open an existing one) in Visual Studio 2017 or 2015. All installed libraries are immediately ready to be `#include`'d and used in your project.
-
 For CMake projects, simply include our toolchain file. See our [using a package](docs/examples/using-sqlite.md) example for the specifics.
 ## Tab-Completion / Auto-Completion
 `Vcpkg` supports auto-completion of commands, package names, options etc. To enable tab-completion in Powershell, use
@@ -77,49 +81,50 @@ Check packages list with
 .\vcpkg list
 ```
 
-My CMake script:
 
+## build executable
+
+Build with IDE
 ```
-cmake_minimum_required( VERSION 3.6.0 )
-
-project ( v2t )
-
-add_executable ( v2t WIN32 main.cpp H264_Decoder.cpp YUV420P_Player.cpp )
-
-target_compile_options( v2t PRIVATE -Wall )
-
-find_package( FFmpeg REQUIRED )
-target_link_libraries( v2t FFmpeg )
-target_include_directories( v2t PRIVATE ${FFMPEG_INCLUDE_DIR} )
+mkdir build
+cd build
+cmake ..  -G "Visual Studio 15 2017" -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
 ```
 
-find_package(SDL REQUIRED)
-link_libraries(${SDL_LIBRARY} SDLmain)
-include_directories(${SDL_INCLUDE_DIR})
-
-find_package(sdl2 REQUIRED)
-target_link_libraries(main PRIVATE SDL2::SDL2 SDL2::SDL2main)
-include_directories(${SDL2_INCLUDE_DIR})
-
-
-add_executable(hello main.cpp)
-
+Options
+You have to add vcpkg toolchain for ffmpeg, pthread
+```
 -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+```
 
-cmake .. -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" -G "Visual Studio 15 2017" -DVCPKG_TARGET_TRIPLET=x86-windows-static -DCMAKE_BUILD_TYPE=Debug
+use static library option
+```
+-DVCPKG_TARGET_TRIPLET=x86-windows-static
+```
 
-cmake .. -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" 
+build type
+```
+-DCMAKE_BUILD_TYPE=Release
+```
+
+install path
+```
+-DCMAKE_INSTALL_PREFIX=install
+```
+
+build without IDE tools
+```
+cmake . -Bstatic -G "Visual Studio 15 2017" -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX=install
+cmake --build static --config Release --target install
+```
 
 https://github.com/Microsoft/vcpkg/issues/703
-
-cmake . -Bstatic -G "Visual Studio 15 2017" -DCMAKE_INSTALL_PREFIX=install
 
 cmake .. -Bstatic -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX=install 
 -DCMAKE_CXX_STANDARD_LIBRARIES="user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib dinput8.lib dxguid.lib dxerr.lib kernel32.lib winspool.lib shell32.lib comdlg32.lib advapi32.lib vcruntimed.lib ucrtd.lib" \
 
-cmake --build static --config Release --target install
-
-
+## Reference
+http://roxlu.com/2014/039/decoding-h264-and-yuv420p-playback
 http://www.voidcn.com/article/p-tlcacfpn-bs.html
 https://github.com/sipsorcery/mediafoundationsamples/tree/master/MFWebCamRtp
 http://en.pudn.com/Download/item/id/1303846.html
@@ -129,6 +134,16 @@ https://stackoverflow.com/questions/17579286/sdl2-0-alternative-for-sdl-overlay
 https://github.com/sipsorcery/mediafoundationsamples/blob/master/MFWebCamRtp/MFWebCamRtp.cpp
 https://stackoverflow.com/questions/19427576/live555-x264-stream-live-source-based-on-testondemandrtspserver
 
+H.264 Decoder using ffmpeg
+https://gist.github.com/roxlu/9329339
+https://github.com/tzyluen/h.264tzy/blob/master/cpp/H264_Decoder.cpp
 https://github.com/xiongziliang/ZLMediaKit
 https://github.com/royshil/KinectAtHomeExtension
 https://github.com/flowerinthenight/ffmpeg-encode-h264mp4/tree/master/H264Encoder
+https://codegists.com/snippet/c/h264_decodercpp_alenstar_c
+https://github.com/MrKepzie/openfx-io/blob/master/FFmpeg/FFmpegFile.h
+https://github.com/ChaoticConundrum/h264-roi/blob/master/zh264decoder.cpp
+https://github.com/shengbinmeng/ffmpeg-h264-dec
+
+Tinylib
+http://tiny-lib.readthedocs.io/en/latest/guide.html#introduction-to-tiny-lib

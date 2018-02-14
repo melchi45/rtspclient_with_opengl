@@ -10,10 +10,6 @@
 	path = vcpkg
 	url = https://github.com/Microsoft/vcpkg.git
 
-[submodule "cmake"]
-	path = cmake
-	url = https://github.com/snikulov/cmake-modules.git
-	
 [submodule "tinylib"]
 	path = tinylib
 	url = https://github.com/diederickh/tinylib.git
