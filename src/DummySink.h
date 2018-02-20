@@ -34,14 +34,14 @@ private:
 	u_int8_t* fReceiveBuffer;
 	MediaSubsession& fSubsession;
 	char* fStreamId;
-	SPropRecord* sPropRecords;
-	uint8_t* buff;
+
+	u_int8_t const* sps;
+	unsigned spsSize;
+	u_int8_t const* pps;
+	unsigned ppsSize;
 
 public:
-	std::string sps;
-	std::string url;
-	int m_nIndex;
-	struct timeval start_time;
+	void setSprop(u_int8_t const* prop, unsigned size);
 };
 
 #endif /* DUMMYSINK_H_ */

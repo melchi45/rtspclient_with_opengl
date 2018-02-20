@@ -420,21 +420,6 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 		// Having successfully setup the subsession, create a data sink for it, and call "startPlaying()" on it.
 		// (This will prepare the data sink to receive data; the actual flow of data from the client won't start happening until later,
 		// after we've sent a RTSP "PLAY" command.)
-
-		if (strcmp(scs.subsession->mediumName(), "video") == 0 &&
-			(strcmp(scs.subsession->codecName(), "H264") == 0))
-		{
-			DummySink* pVideoSink = DummySink::createNew(env, *scs.subsession, rtspClient->url());
-//			pVideoSink->m_nIndex = ((MediaRTSPClient*)rtspClient)->m_nID;
-
-			std::string name = pVideoSink->name();
-			pVideoSink->sps = scs.subsession->fmtp_spropparametersets();
-
-			env <<*rtspClient<<"sps=" << pVideoSink->sps.c_str()<< "\n";
-
-			scs.subsession->sink = pVideoSink;
-		}
-
 		if (!((MediaRTSPClient*)rtspClient)->isUpTransportStream()) {
 			scs.subsession->sink = DummySink::createNew(env, *scs.subsession, rtspClient->url());
 			// perhaps use your own custom "MediaSink" subclass instead
@@ -442,6 +427,47 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 				env << *rtspClient << "Failed to create a data sink for the \"" << *scs.subsession
 					<< "\" subsession: " << env.getResultMsg() << "\n";
 				break;
+			}
+
+			if (strcmp(scs.subsession->mediumName(), "video") == 0) {
+				if ((strcmp(scs.subsession->codecName(), "H264") == 0)) {
+					const char *sprop = scs.subsession->fmtp_spropparametersets();
+					u_int8_t const* sps = NULL;
+					unsigned spsSize = 0;
+					u_int8_t const* pps = NULL;
+					unsigned ppsSize = 0;
+
+					if (sprop != NULL) {
+						unsigned int numSPropRecords;
+						SPropRecord* sPropRecords = parseSPropParameterSets(sprop, numSPropRecords);
+						for (unsigned i = 0; i < numSPropRecords; ++i) {
+							if (sPropRecords[i].sPropLength == 0) continue; // bad data
+							u_int8_t nal_unit_type = (sPropRecords[i].sPropBytes[0]) & 0x1F;
+							if (nal_unit_type == 7/*SPS*/) {
+								sps = sPropRecords[i].sPropBytes;
+								spsSize = sPropRecords[i].sPropLength;
+							}
+							else if (nal_unit_type == 8/*PPS*/) {
+								pps = sPropRecords[i].sPropBytes;
+								ppsSize = sPropRecords[i].sPropLength;
+							}
+						}
+					}
+
+					if (sps != NULL) {
+						//((DummySink *)scs.subsession->sink)->setSprop(sps, spsSize);
+					}
+					if (pps != NULL) {
+						//((DummySink *)scs.subsession->sink)->setSprop(pps, ppsSize);
+					}
+
+					scs.subsession->videoWidth();
+					scs.subsession->videoHeight();
+				}
+			}
+
+			if (strcmp(scs.subsession->mediumName(), "audio") == 0) {
+
 			}
 
 			env << *rtspClient << "Created a data sink for the \"" << *scs.subsession << "\" subsession\n";
