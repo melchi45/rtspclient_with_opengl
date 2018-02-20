@@ -414,12 +414,26 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 			break;
 		}
 
-		env << *rtspClient << "Set up the \"" << *scs.subsession
+		env << *rtspClient << "Set up the \"" << *scs.subsession 
 			<< "\" subsession (client ports " << scs.subsession->clientPortNum() << "-" << scs.subsession->clientPortNum() + 1 << ")\n";
 
 		// Having successfully setup the subsession, create a data sink for it, and call "startPlaying()" on it.
 		// (This will prepare the data sink to receive data; the actual flow of data from the client won't start happening until later,
 		// after we've sent a RTSP "PLAY" command.)
+
+		if (strcmp(scs.subsession->mediumName(), "video") == 0 &&
+			(strcmp(scs.subsession->codecName(), "H264") == 0))
+		{
+			DummySink* pVideoSink = DummySink::createNew(env, *scs.subsession, rtspClient->url());
+//			pVideoSink->m_nIndex = ((MediaRTSPClient*)rtspClient)->m_nID;
+
+			std::string name = pVideoSink->name();
+			pVideoSink->sps = scs.subsession->fmtp_spropparametersets();
+
+			env <<*rtspClient<<"sps=" << pVideoSink->sps.c_str()<< "\n";
+
+			scs.subsession->sink = pVideoSink;
+		}
 
 		if (!((MediaRTSPClient*)rtspClient)->isUpTransportStream()) {
 			scs.subsession->sink = DummySink::createNew(env, *scs.subsession, rtspClient->url());
@@ -432,10 +446,9 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 
 			env << *rtspClient << "Created a data sink for the \"" << *scs.subsession << "\" subsession\n";
 			scs.subsession->miscPtr = rtspClient; // a hack to let subsession handle functions get the "RTSPClient" from the subsession 
-
 			scs.subsession->sink->startPlaying(*(scs.subsession->readSource()),
 				subsessionAfterPlaying, scs.subsession);
-
+			// Also set a handler to be called if a RTCP "BYE" arrives for this subsession:
 			if (scs.subsession->rtcpInstance() != NULL) {
 				scs.subsession->rtcpInstance()->setByeHandler(subsessionByeHandler, scs.subsession);
 			}

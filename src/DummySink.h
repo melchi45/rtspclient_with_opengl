@@ -1,6 +1,7 @@
 #ifndef DUMMYSINK_H_
 #define DUMMYSINK_H_
 
+#include <string>
 #include "liveMedia.hh"
 
 // Define a data sink (a subclass of "MediaSink") to receive the data for each subsession (i.e., each audio or video 'substream').
@@ -33,6 +34,14 @@ private:
 	u_int8_t* fReceiveBuffer;
 	MediaSubsession& fSubsession;
 	char* fStreamId;
+	SPropRecord* sPropRecords;
+	uint8_t* buff;
+
+public:
+	std::string sps;
+	std::string url;
+	int m_nIndex;
+	struct timeval start_time;
 };
 
 #endif /* DUMMYSINK_H_ */

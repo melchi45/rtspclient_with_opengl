@@ -23,18 +23,24 @@ For short description of available commands, run `vcpkg help`.
 - Git
 - *Optional: CMake 3.10.2
 
-# vcpkg list 
-# https://blogs.msdn.microsoft.com/vcblog/2016/09/19/vcpkg-a-tool-to-acquire-and-build-c-open-source-libraries-on-windows/
-# https://docs.microsoft.com/en-us/cpp/vcpkg
-
 ```
 set DXSDK_PATH="D:\Tools\DXSDK"
 set PKG_CONFIG_EXECUTABLE="D:\Tools\pkg-config\bin\pkg-config.exe"
 set PKG_CONFIG_PATH="D:\workspace\ffmpeg-example\vcpkg\installed\x86-windows\lib"
 ```
 
+## vcpkg
 
+about vcpkg from this url.
+ - https://blogs.msdn.microsoft.com/vcblog/2016/09/19/vcpkg-a-tool-to-acquire-and-build-c-open-source-libraries-on-windows/
+ - https://docs.microsoft.com/en-us/cpp/vcpkg
+
+install vcpkg to D:\Tools folder
+```
+d:
+mkdir Tools
 cd D:\Tools\
+```
 
 Clone vcpkg repository, then run
 ```
@@ -56,16 +62,15 @@ Installing new libraries will make them instantly available.
 CMake projects should use: "-DCMAKE_TOOLCHAIN_FILE=D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
 ```
 
-Install any packages for x86, x64, arm, arm64 windows with
+Install any packages for x86(x86-windows), x64(x64-windows), arm(arm-windows), arm64(arm64-winodws) windows with
 ```
-.\vcpkg install ffmpeg:x64-windows ffmpeg:x86-windows ffmpeg:arm-windows ffmpeg:arm64-winodws 
-.\vcpkg install sdl2:x64-winodws sdl2:x86-windows sdl2:arm-windows sdl2:arm64-winodws
-.\vcpkg install pthread:x64-winodws pthread:x86-windows pthread:arm-windows pthread:arm64-winodws
-.\vcpkg install glew:x86-windows glew:x64-windows glew:arm-windows glew:arm64-winodws
-.\vcpkg install glfw3:x86-windows glfw3:x64-windows glfw3:arm-windows glfw3:arm64-winodws
-.\vcpkg install zlib:x86-windows zlib:x64-windows zlib:arm-windows zlib:arm64-winodws
+.\vcpkg install ffmpeg:x64-windows ffmpeg:x86-windows
+.\vcpkg install sdl2:x64-windows sdl2:x86-windows
+.\vcpkg install pthread:x64-windows pthread:x86-windows
+.\vcpkg install glew:x86-windows glew:x64-windows
+.\vcpkg install glfw3:x86-windows glfw3:x64-windows
+.\vcpkg install zlib:x86-windows zlib:x64-windows
 ```
-
 
 Finally, create a New Project (or open an existing one) in Visual Studio 2017 or 2015. All installed libraries are immediately ready to be `#include`'d and used in your project.
 For CMake projects, simply include our toolchain file. See our [using a package](docs/examples/using-sqlite.md) example for the specifics.
@@ -147,3 +152,5 @@ https://github.com/shengbinmeng/ffmpeg-h264-dec
 
 Tinylib
 http://tiny-lib.readthedocs.io/en/latest/guide.html#introduction-to-tiny-lib
+
+https://www.bountysource.com/issues/46787191-can-not-find-ffmpeg-by-find_package
