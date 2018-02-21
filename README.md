@@ -124,9 +124,14 @@ cmake --build static --config Release --target install
 ```
 
 https://github.com/Microsoft/vcpkg/issues/703
+```
+cmake .. -Bstatic -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" 
+```
 
-cmake .. -Bstatic -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX=install 
--DCMAKE_CXX_STANDARD_LIBRARIES="user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib dinput8.lib dxguid.lib dxerr.lib kernel32.lib winspool.lib shell32.lib comdlg32.lib advapi32.lib vcruntimed.lib ucrtd.lib" \
+for sdl2 dependency
+```
+-DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_STANDARD_LIBRARIES="user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib dinput8.lib dxguid.lib dxerr.lib kernel32.lib winspool.lib shell32.lib comdlg32.lib advapi32.lib vcruntimed.lib ucrtd.lib"
+```
 
 ## Reference
 http://roxlu.com/2014/039/decoding-h264-and-yuv420p-playback

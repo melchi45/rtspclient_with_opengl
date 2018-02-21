@@ -28,9 +28,9 @@ void DummySink::afterGettingFrame(void* clientData, unsigned frameSize, unsigned
 #define DEBUG_PRINT_EACH_RECEIVED_FRAME 1
 #define DEBUG_PRINT_NPT 1
 
-int Width = 0;
-int Height = 0;
-unsigned numSPropRecords;
+//int Width = 0;
+//int Height = 0;
+//unsigned numSPropRecords;
 
 void DummySink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes,
 				  struct timeval presentationTime, unsigned /*durationInMicroseconds*/) {

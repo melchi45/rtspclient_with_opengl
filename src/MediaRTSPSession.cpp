@@ -4,6 +4,8 @@
 #include "BasicUsageEnvironment.hh"
 #include "MediaRTSPClient.h"
 #include "DummySink.h"
+#include "MediaH264VideoRTPSink.h"
+#include "liveMedia.hh"
 
 char const* clientProtocolName = "RTSP";
 
@@ -421,14 +423,6 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 		// (This will prepare the data sink to receive data; the actual flow of data from the client won't start happening until later,
 		// after we've sent a RTSP "PLAY" command.)
 		if (!((MediaRTSPClient*)rtspClient)->isUpTransportStream()) {
-			scs.subsession->sink = DummySink::createNew(env, *scs.subsession, rtspClient->url());
-			// perhaps use your own custom "MediaSink" subclass instead
-			if (scs.subsession->sink == NULL) {
-				env << *rtspClient << "Failed to create a data sink for the \"" << *scs.subsession
-					<< "\" subsession: " << env.getResultMsg() << "\n";
-				break;
-			}
-
 			if (strcmp(scs.subsession->mediumName(), "video") == 0) {
 				if ((strcmp(scs.subsession->codecName(), "H264") == 0)) {
 					const char *sprop = scs.subsession->fmtp_spropparametersets();
@@ -454,32 +448,52 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 						}
 					}
 
-					if (sps != NULL) {
-						//((DummySink *)scs.subsession->sink)->setSprop(sps, spsSize);
-					}
-					if (pps != NULL) {
-						//((DummySink *)scs.subsession->sink)->setSprop(pps, ppsSize);
+					scs.subsession->sink = DummySink::createNew(env, *scs.subsession, rtspClient->url());
+					/*scs.subsession->sink = MediaH264VideoRTPSink::createNew(env,
+						scs.subsession,
+						sps, spsSize, pps, ppsSize,
+						rtspClient->url());*/
+					/*scs.subsession->sink = H264VideoRTPSink::createNew(env,
+						scs.subsession->rtpSource()->RTPgs(), scs.subsession->rtpPayloadFormat(),
+						scs.subsession->fmtp_spropparametersets());*/
+					// perhaps use your own custom "MediaSink" subclass instead
+					if (scs.subsession->sink == NULL) {
+						env << *rtspClient << "Failed to create a data sink for the \"" << *scs.subsession
+							<< "\" subsession: " << env.getResultMsg() << "\n";
+						break;
 					}
 
 					scs.subsession->videoWidth();
 					scs.subsession->videoHeight();
+					
+					env << *rtspClient << "Created a video data sink for the \"" << *scs.subsession << "\" subsession\n";
+					scs.subsession->miscPtr = rtspClient; // a hack to let subsession handle functions get the "RTSPClient" from the subsession 
+
+					// Create the data source: an "H264 Video RTP source"
+					//RTPSource* mVideoReceiverSource = H264VideoRTPSource::createNew(env, scs.subsession->rtpSource()->RTPgs(), scs.subsession->rtpPayloadFormat(), 90000);
+
+					if (scs.subsession->sink->startPlaying(*(scs.subsession->readSource()),
+						subsessionAfterPlaying, scs.subsession)) {
+						env << *rtspClient << "Failed to start play for the \"" << *scs.subsession
+							<< "\" subsession: " << env.getResultMsg() << "\n";
+						break;
+					}
+					// Also set a handler to be called if a RTCP "BYE" arrives for this subsession:
+					if (scs.subsession->rtcpInstance() != NULL) {
+						scs.subsession->rtcpInstance()->setByeHandler(subsessionByeHandler, scs.subsession);
+					}
+
+					// TODO: Initialize video decoder
+
 				}
 			}
 
 			if (strcmp(scs.subsession->mediumName(), "audio") == 0) {
-
+				// TODO: Initialize audio decoder
 			}
-
-			env << *rtspClient << "Created a data sink for the \"" << *scs.subsession << "\" subsession\n";
-			scs.subsession->miscPtr = rtspClient; // a hack to let subsession handle functions get the "RTSPClient" from the subsession 
-			scs.subsession->sink->startPlaying(*(scs.subsession->readSource()),
-				subsessionAfterPlaying, scs.subsession);
-			// Also set a handler to be called if a RTCP "BYE" arrives for this subsession:
-			if (scs.subsession->rtcpInstance() != NULL) {
-				scs.subsession->rtcpInstance()->setByeHandler(subsessionByeHandler, scs.subsession);
-			}
-		}
-		else {
+		} else {
+			// TODO: generate transport stream live
+			// http://live-devel.live555.narkive.com/UK4Lxd4z/how-to-play-a-mpeg2-ts-h264-transport-stream-live-stream
 			// TODO: prepare recording
 			//		    Boolean             fHave_amba_audio;
 			//		    Boolean             fHave_amba_video;
