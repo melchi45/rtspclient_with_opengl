@@ -13,6 +13,3 @@
 [submodule "tinylib"]
 	path = tinylib
 	url = https://github.com/diederickh/tinylib.git
-[submodule "cmake"]
-	path = cmake
-	url = https://github.com/melchi45/cmake.git
