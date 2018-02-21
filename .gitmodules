@@ -5,3 +5,12 @@
 [submodule "tinylib"]
 	path = tinylib
 	url = https://github.com/diederickh/tinylib.git
+[submodule "cmake"]
+	path = cmake
+	url = https://github.com/melchi45/cmake.git
+[submodule "live555"]
+	path = live555
+	url = https://github.com/melchi45/live555.git
+[submodule "vcpkg"]
+	path = vcpkg
+	url = https://github.com/melchi45/vcpkg.git

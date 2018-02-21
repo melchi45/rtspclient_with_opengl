@@ -66,7 +66,7 @@ Install any packages for x86(x86-windows), x64(x64-windows), arm(arm-windows), a
 ```
 .\vcpkg install ffmpeg:x64-windows ffmpeg:x86-windows
 .\vcpkg install sdl2:x64-windows sdl2:x86-windows
-.\vcpkg install pthread:x64-windows pthread:x86-windows
+.\vcpkg install pthreads:x64-windows pthreads:x86-windows
 .\vcpkg install glew:x86-windows glew:x64-windows
 .\vcpkg install glfw3:x86-windows glfw3:x64-windows
 .\vcpkg install zlib:x86-windows zlib:x64-windows
