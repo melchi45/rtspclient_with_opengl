@@ -6,17 +6,19 @@
 #include <tinylib.h>
 
 H264_Decoder::H264_Decoder(h264_decoder_callback frameCallback, void* user)
-	:codec(NULL)
+	: codec(NULL)
 	, codec_context(NULL)
 	, parser(NULL)
 	, fp(NULL)
-	, frame(0)
+	, framecount(0)
 	, cb_frame(frameCallback)
 	, cb_user(user)
 	, frame_timeout(0)
 	, frame_delay(0)
 {
+	// avcodec init
 	avcodec_register_all();
+	av_register_all();
 }
 
 H264_Decoder::~H264_Decoder() {
@@ -44,43 +46,53 @@ H264_Decoder::~H264_Decoder() {
 
 	cb_frame = NULL;
 	cb_user = NULL;
-	frame = 0;
+	framecount = 0;
 	frame_timeout = 0;
 }
 
-bool H264_Decoder::load(const char* filepath, float fps) {
+AVPixelFormat pickDecodeFormat(AVCodecContext *s, const AVPixelFormat *fmt)
+{
+	return AV_PIX_FMT_YUV420P;
+}
 
+bool H264_Decoder::load(const char* filepath, float fps)
+{
+	// create AVCodec
 	codec = avcodec_find_decoder(AV_CODEC_ID_H264);
 	if (!codec) {
-		log_error("Error: cannot find the h264 codec: %s\n", filepath);
+		log_error("Error: cannot find the h264 codec: %s", filepath);
 		return false;
 	}
 
+	// alloc context
 	codec_context = avcodec_alloc_context3(codec);
-
 	if (codec->capabilities & CODEC_CAP_TRUNCATED) {
 		codec_context->flags |= CODEC_FLAG_TRUNCATED;
 	}
 
+	codec_context->get_format = pickDecodeFormat;
+
+	// verify
 	if (avcodec_open2(codec_context, codec, NULL) < 0) {
-		printf("Error: could not open codec.\n");
+		log_error("Error: could not open codec.");
 		return false;
 	}
 
 	fp = fopen(filepath, "rb");
-
 	if (!fp) {
 		log_error("Error: cannot open: %s\n", filepath);
 		return false;
 	}
 
+	// init parser
 	picture = av_frame_alloc();
 	parser = av_parser_init(AV_CODEC_ID_H264);
-
 	if (!parser) {
 		log_error("Erorr: cannot create H264 parser.\n");
 		return false;
 	}
+
+	framecount = 0;
 
 	if (fps > 0.0001f) {
 		frame_delay = (1.0f / fps) * 1000ull * 1000ull * 1000ull;
@@ -93,8 +105,22 @@ bool H264_Decoder::load(const char* filepath, float fps) {
 	return true;
 }
 
-bool H264_Decoder::readFrame() {
+void H264_Decoder::forceFPS(float fps)
+{
+	forcefps = fps;
+}
 
+double H264_Decoder::getFPS() const
+{
+	if (forcefps)
+		return forcefps;
+
+	AVRational rational = codec_context->time_base;
+	return av_q2d(rational);
+}
+
+bool H264_Decoder::readFrame() 
+{
 	uint64_t now = rx_hrtime();
 	if (now < frame_timeout) {
 		return false;
@@ -123,8 +149,8 @@ bool H264_Decoder::readFrame() {
 	return true;
 }
 
-void H264_Decoder::decodeFrame(uint8_t* data, int size) {
-
+void H264_Decoder::decodeFrame(uint8_t* data, int size)
+{
 	AVPacket pkt;
 	int got_picture = 0;
 	int len = 0;
@@ -143,15 +169,15 @@ void H264_Decoder::decodeFrame(uint8_t* data, int size) {
 		return;
 	}
 
-	++frame;
+	++framecount;
 
 	if (cb_frame) {
 		cb_frame(picture, &pkt, cb_user);
 	}
 }
 
-int H264_Decoder::readBuffer() {
-
+int H264_Decoder::readBuffer() 
+{
 	int bytes_read = (int)fread(inbuf, 1, H264_INBUF_SIZE, fp);
 
 	if (bytes_read) {
@@ -161,8 +187,8 @@ int H264_Decoder::readBuffer() {
 	return bytes_read;
 }
 
-bool H264_Decoder::update(bool& needsMoreBytes) {
-
+bool H264_Decoder::update(bool& needsMoreBytes)
+{
 	needsMoreBytes = false;
 
 	if (!fp) {

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
 set ( PROJECT_NAME rtspclient_with_opengl )
+set ( TEST_DECODE testDecode )
 set ( LIVE555 live555 )
 set ( TINYLIB tinylib )
 #set ( SDL2 sdl2 )
@@ -118,6 +119,12 @@ endif()
 #find_package(SDL2_image REQUIRED)
 #include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 
+find_package(GLFW3) # First try to find using the find_package method (works with vcpkg)
+if(GLFW_FOUND) # Works with some other methods
+	message(STATUS "GLFW3_INCLUDE_PATH=${GLFW3_INCLUDE_PATH}")
+	message(STATUS "GLFW_LIBRARIES=${GLFW_LIBRARIES}")
+endif()
+
 if ( WIN32 )
    list ( APPEND ${PROJECT_NAME}_DEFINITIONS
       -DWINNT
@@ -176,17 +183,32 @@ add_executable(${PROJECT_NAME} ${SRC_FILES} ${HDR_FILES})
 
 target_include_directories( ${PROJECT_NAME} PRIVATE ${LIVE555_HEADER_FILES} )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
-#target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${SDL2_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PRIVATE ${THREADS_PTHREADS_INCLUDE_DIR})
-target_include_directories(${PROJECT_NAME} PRIVATE ${${TINYLIB}_HOME}/src)
+#target_include_directories( ${PROJECT_NAME} SYSTEM PRIVATE ${SDL2_INCLUDE_DIR} )
+target_include_directories( ${PROJECT_NAME} PRIVATE ${THREADS_PTHREADS_INCLUDE_DIR} )
+target_include_directories( ${PROJECT_NAME} PRIVATE ${${TINYLIB}_HOME}/src )
 
-target_link_libraries(${PROJECT_NAME} ${LIVE555} )
-target_link_libraries(${PROJECT_NAME} ${FFMPEG_LIBRARIES} )
-#target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY} )
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries( ${PROJECT_NAME} ${LIVE555} )
+target_link_libraries( ${PROJECT_NAME} ${FFMPEG_LIBRARIES} )
+#target_link_libraries( ${PROJECT_NAME} ${SDL2_LIBRARY} )
+target_link_libraries( ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 
 if ( BUILD_SHARED_LIBS )
 	target_compile_definitions(${PROJECT_NAME} PRIVATE LIVEMEDIA_IMPORTS)
 else ( LIVEMEDIA_STATIC )
 	target_compile_definitions(${PROJECT_NAME} PRIVATE LIVEMEDIA_STATIC)
 endif ()
+
+# get all *.cpp files from src to build target
+file(GLOB TEST_DECODER_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*${CXX_SRC_EXT_PATTERN} ${PROJECT_SOURCE_DIR}/src/H264Decoder.cpp)
+file(GLOB TEST_DECODER_HDR_FILES ${PROJECT_SOURCE_DIR}/src/H264Decoder.h)
+# makes source and header files group
+source_group("Source Files" FILES ${TEST_DECODER_SRC_FILES})
+source_group("Header Files" FILES ${TEST_DECODER_HDR_FILES})
+
+add_executable( ${TEST_DECODE} ${TEST_DECODER_SRC_FILES} ${TEST_DECODER_HDR_FILES} )
+target_include_directories( ${TEST_DECODE} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
+target_include_directories( ${TEST_DECODE} PRIVATE ${PROJECT_SOURCE_DIR}/src)
+#target_include_directories( ${TEST_DECODE} PRIVATE ${GLFW3_INCLUDE_PATH} )
+target_include_directories( ${TEST_DECODE} PRIVATE ${${TINYLIB}_HOME}/src )
+target_link_libraries( ${TEST_DECODE} ${FFMPEG_LIBRARIES} )
+#target_link_libraries( ${TEST_DECODE} ${GLFW_LIBRARIES} )
