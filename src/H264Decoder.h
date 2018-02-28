@@ -17,7 +17,7 @@ extern "C" {
 #pragma comment(lib, "avcodec.lib")
 #pragma comment(lib, "avformat.lib")
 
-typedef void(*h264_decoder_callback)(AVFrame* frame, AVPacket* pkt, void* user);         /* the decoder callback, which will be called when we have decoded a frame */
+typedef void(*h264_decoder_callback)(AVCodecContext *pCodecCtx, AVFrame* frame, AVPacket* pkt, int framecount, void* user);         /* the decoder callback, which will be called when we have decoded a frame */
 
 class H264_Decoder {
 

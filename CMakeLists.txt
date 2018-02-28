@@ -145,7 +145,7 @@ add_definitions ( ${${PROJECT_NAME}_DEFINITIONS} )
 if(MSVC)
     add_definitions(/FI"export.h")
 	add_definitions(-DWITH_OPENCV2)
-	add_definitions(-D_CONSOLE)
+	add_definitions(-D_CONSOLE)	
 else()
     # GCC or Clang
     add_definitions(-include export.h)
@@ -198,17 +198,46 @@ else ( LIVEMEDIA_STATIC )
 	target_compile_definitions(${PROJECT_NAME} PRIVATE LIVEMEDIA_STATIC)
 endif ()
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/test.264
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 # get all *.cpp files from src to build target
-file(GLOB TEST_DECODER_SRC_FILES ${PROJECT_SOURCE_DIR}/test/*${CXX_SRC_EXT_PATTERN} ${PROJECT_SOURCE_DIR}/src/H264Decoder.cpp)
-file(GLOB TEST_DECODER_HDR_FILES ${PROJECT_SOURCE_DIR}/src/H264Decoder.h)
+file(GLOB TEST_DECODER_SRC_FILES
+	${PROJECT_SOURCE_DIR}/test/*${CXX_SRC_EXT_PATTERN}
+	${PROJECT_SOURCE_DIR}/src/H264Decoder.cpp
+	${PROJECT_SOURCE_DIR}/src/log_utils.c
+)
+file(GLOB TEST_DECODER_HDR_FILES
+	${PROJECT_SOURCE_DIR}/src/H264Decoder.h
+	${PROJECT_SOURCE_DIR}/src/log_utils.h
+)
 # makes source and header files group
 source_group("Source Files" FILES ${TEST_DECODER_SRC_FILES})
 source_group("Header Files" FILES ${TEST_DECODER_HDR_FILES})
 
 add_executable( ${TEST_DECODE} ${TEST_DECODER_SRC_FILES} ${TEST_DECODER_HDR_FILES} )
+target_include_directories( ${TEST_DECODE} PRIVATE ${LIVE555_HEADER_FILES} )
 target_include_directories( ${TEST_DECODE} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
 target_include_directories( ${TEST_DECODE} PRIVATE ${PROJECT_SOURCE_DIR}/src)
 #target_include_directories( ${TEST_DECODE} PRIVATE ${GLFW3_INCLUDE_PATH} )
 target_include_directories( ${TEST_DECODE} PRIVATE ${${TINYLIB}_HOME}/src )
 target_link_libraries( ${TEST_DECODE} ${FFMPEG_LIBRARIES} )
 #target_link_libraries( ${TEST_DECODE} ${GLFW_LIBRARIES} )
+
+#-r rtsp://192.168.123.37/profile5/media.smp -u admin 1
+
+if (EXECUTE_RTSP_CLIENT)
+add_custom_command (
+    TARGET ${PROJECT_NAME}
+    POST_BUILD
+    COMMAND ${PROJECT_NAME} -r rtsp://192.168.123.37/profile5/media.smp -u admin 1
+    COMMENT "Execute ${PROJECT_NAME}"
+)
+endif ()
+
+add_custom_command (
+    TARGET ${TEST_DECODE}
+    POST_BUILD
+    COMMAND ${TEST_DECODE}
+    COMMENT "Execute ${TEST_DECODE}"
+)

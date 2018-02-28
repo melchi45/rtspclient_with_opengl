@@ -172,7 +172,7 @@ void H264_Decoder::decodeFrame(uint8_t* data, int size)
 	++framecount;
 
 	if (cb_frame) {
-		cb_frame(picture, &pkt, cb_user);
+		cb_frame(codec_context, picture, &pkt, framecount, cb_user);
 	}
 }
 
