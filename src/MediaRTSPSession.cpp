@@ -11,6 +11,7 @@
 
 #include <map>
 
+//#ifdef DEBUG_PRINT_EACH_RECEIVED_FRAME
 #define RCVBUF_SIZE		2097152
 
 char const* clientProtocolName = "RTSP";
@@ -558,7 +559,9 @@ bandwidth_estimator_update(unsigned int ssrc, unsigned short seq, struct timeval
 		if (sampleframe) {
 			unsigned elapsed = tvdiff_us(&rcvtv, &mi->second.lastPktRcvdTimestamp);
 			unsigned cbw = 8.0 * mi->second.lastPktSize / (elapsed / 1000000.0);
+#if DEBUG_PRINT_EACH_RECEIVED_FRAME
 			log_info("XXX: sampled bw = %u bps\n", cbw);
+#endif
 			mi->second.samples++;
 			mi->second.totalElapsed += elapsed;
 			mi->second.totalBytes += mi->second.lastPktSize;
@@ -625,8 +628,10 @@ rtp_packet_handler(void *clientData, unsigned char *packet, unsigned &packetSize
 //		ga_log("%10u.%06u log_rtp: flags %04x seq %u ts %u ssrc %u size %u\n",
 //			tv.tv_sec, tv.tv_usec, flags, seqnum, timestamp, ssrc, packetSize);
 //#else
+#if DEBUG_PRINT_EACH_RECEIVED_FRAME
 		log_info("log_rtp: flags %04x seq %u ts %u ssrc %u size %u\n",
 			flags, seqnum, timestamp, ssrc, packetSize);
+#endif
 //#endif
 //	}
 	//
@@ -767,6 +772,8 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 						env << "Receiver buffer increased to " << newsz << "\n";
 					}
 					// TODO: Initialize video decoder
+
+					// reference http://blog.chinaunix.net/uid-15063109-id-4482932.html
 				}
 			}
 

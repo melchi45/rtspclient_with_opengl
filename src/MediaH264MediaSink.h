@@ -25,6 +25,9 @@ private:
 			unsigned durationInMicroseconds);
 	void afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes,
 			struct timeval presentationTime, unsigned durationInMicroseconds);
+	bool isH264iFrame(u_int8_t* packet);
+	bool FindStartCode3(unsigned char *Buf);
+	bool FindStartCode4(unsigned char *Buf);
 
 private:
 	// redefined virtual functions:
@@ -35,6 +38,8 @@ private:
 	MediaSubsession& fSubsession;
 	char* fStreamId;
 	int video_framing;
+	unsigned m_nFrameSize;
+	unsigned m_nNalHeaderStartCodeOffset;
 };
 
 #endif /* _MEDIA_H264_MEDIASINK_H_ */
