@@ -3,11 +3,12 @@
 
 #include <string>
 #include <pthread.h>
+#include "FFmpegDecoder.h"
 
 class TaskScheduler;
 class UsageEnvironment;
 class RTSPClient;
-class MediaRTSPSession
+class MediaRTSPSession : public CDecodeCB
 {
 public:
 	MediaRTSPSession();
@@ -46,6 +47,8 @@ private:
 
 	static void *rtsp_thread_fun(void *param);
 	void rtsp_fun();
+protected:
+	virtual void videoCB(int width, int height, uint8_t* buff, int len);
 };
 
 #endif // _MEDIA_RTSP_SESSION_H_

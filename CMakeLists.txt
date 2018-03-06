@@ -85,22 +85,18 @@ endif ( WIN32)
 
 find_library(OpenGL REQUIRED)
 
-find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED)
-#find_package(FFmpeg REQUIRED)
+ #find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE SWSCALE REQUIRED)
+find_package(FFmpeg REQUIRED)
 
 if(FFMPEG_FOUND)
   message("Found FFMPEG/LibAV libraries")
   message("FFMPEG_INCLUDE_DIRS = ${FFMPEG_INCLUDE_DIRS} ")
   message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
   message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
-
-#  include_directories(${FFMPEG_INCLUDE_DIRS})
   
-#  include_directories(${FFMPEG_INCLUDE_DIRS})
-#  target_link_libraries (${PROJECT_NAME} ${FFMPEG_LIBRARIES})
-#  FFMPEG_INCLUDE_DIRS  - Include directory necessary for using the required components headers.
-#  FFMPEG_LIBRARIES     - Link these to use the required ffmpeg components.
-#  FFMPEG_DEFINITIONS   - Compiler switches required for using the required ffmpeg components.
+  if( SWSCALE_FOUND)
+	message("Found SWSCALE_LIBRARIES = ${SWSCALE_LIBRARIES}")
+  endif()
 else()
     message(FATAL_ERROR "FFMPEG not found")
 endif()
@@ -189,6 +185,7 @@ target_include_directories( ${PROJECT_NAME} PRIVATE ${${TINYLIB}_HOME}/src )
 
 target_link_libraries( ${PROJECT_NAME} ${LIVE555} )
 target_link_libraries( ${PROJECT_NAME} ${FFMPEG_LIBRARIES} )
+target_link_libraries( ${PROJECT_NAME} ${SWSCALE_LIBRARIES} )
 #target_link_libraries( ${PROJECT_NAME} ${SDL2_LIBRARY} )
 target_link_libraries( ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 

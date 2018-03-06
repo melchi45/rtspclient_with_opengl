@@ -135,7 +135,7 @@ int MediaRTSPSession::openURL(UsageEnvironment& env)
 {
 	// Begin by creating a "RTSPClient" object.  Note that there is a separate "RTSPClient" object for each stream that we wish
 	// to receive (even if more than stream uses the same "rtsp://" URL).
-	m_rtspClient = MediaRTSPClient::createNew(env, m_rtspUrl.c_str(), m_debugLevel, m_progName.c_str(), m_port, m_username.c_str(), m_password.c_str());
+	m_rtspClient = MediaRTSPClient::createNew(env, this, m_rtspUrl.c_str(), m_debugLevel, m_progName.c_str(), m_port, m_username.c_str(), m_password.c_str());
 	if (m_rtspClient == NULL)
 	{
 		env << "Failed to create a RTSP client for URL \"" << m_rtspUrl.c_str() << "\": " << env.getResultMsg() << "\n";
@@ -159,6 +159,11 @@ int MediaRTSPSession::openURL(UsageEnvironment& env)
 			m_rtspClient->sendAnnounceCommand(((MediaRTSPClient*)m_rtspClient)->getSDPDescription(), continueAfterANNOUNCE);
 	}
 	return 0;
+}
+
+void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len)
+{
+
 }
 
 // Implementation of the RTSP 'response handlers':
@@ -744,6 +749,12 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 							<< "\" subsession: " << env.getResultMsg() << "\n";
 						break;
 					}
+					FFmpegDecoder* decoder = ((MediaH264MediaSink*)scs.subsession->sink)->getDecoder(); // alias
+					if (decoder == NULL) {
+						env << "Failed to get a video decoder\n";
+						break;
+					}
+					decoder->openDecoder(1920, 1080, ((MediaRTSPClient*)rtspClient)->getRTSPSession());
 
 //					scs.subsession->videoWidth();
 //					scs.subsession->videoHeight();

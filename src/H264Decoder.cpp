@@ -17,8 +17,8 @@ H264_Decoder::H264_Decoder(h264_decoder_callback frameCallback, void* user)
 	, frame_delay(0)
 {
 	// avcodec init
-	avcodec_register_all();
-	av_register_all();
+	//avcodec_register_all();
+	//av_register_all();
 }
 
 H264_Decoder::~H264_Decoder() {

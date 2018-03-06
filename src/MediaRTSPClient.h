@@ -7,6 +7,7 @@
 #include "StreamClientState.h"
 #include "MediaBasicUsageEnvironment.h"
 
+class MediaRTSPSession;
 // If you're streaming just a single stream (i.e., just from a single URL, once), then you can define and use just a single
 // "StreamClientState" structure, as a global variable in your application.  However, because - in this demo application - we're
 // showing how to play multiple streams, concurrently, we can't do that.  Instead, we have to have a separate "StreamClientState"
@@ -20,8 +21,17 @@ public:
 		const char* username = NULL,
 		const char* password = NULL);
 
+	static MediaRTSPClient* createNew(UsageEnvironment& env, 
+		MediaRTSPSession* rtspSession,
+		char const* rtspURL,
+		int verbosityLevel = 0,
+		char const* applicationName = NULL,
+		portNumBits tunnelOverHTTPPortNum = 0,
+		const char* username = NULL,
+		const char* password = NULL);
+
 protected:
-	MediaRTSPClient(UsageEnvironment& env, char const* rtspURL,
+	MediaRTSPClient(UsageEnvironment& env, MediaRTSPSession* rtspSession, char const* rtspURL,
 		int verbosityLevel, char const* applicationName, portNumBits tunnelOverHTTPPortNum,
 		const char* username = NULL, const char* password = NULL);
 	// called only by createNew();
@@ -34,6 +44,7 @@ protected:
 	char*			sdpDescription;
 	bool			bUpTransport;
 	bool			bInterleaved;
+	MediaRTSPSession* mediaRTSPSession;
 /*	
 	stream_reader_t     *fStream_reader;
 	//    Boolean             fHave_amba_audio;
@@ -55,6 +66,7 @@ protected:
 
 public:
 	Authenticator * getAuth() { return ourAuthenticator; }
+	MediaRTSPSession* getRTSPSession() { return mediaRTSPSession; }
 	char* getSDPDescription();
 
 /*

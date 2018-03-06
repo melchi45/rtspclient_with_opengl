@@ -6,17 +6,25 @@
 MediaRTSPClient* MediaRTSPClient::createNew(UsageEnvironment& env, char const* rtspURL,
 	int verbosityLevel, char const* applicationName, portNumBits tunnelOverHTTPPortNum,
 	const char* username, const char* password) {
-	return new MediaRTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum,
+	return new MediaRTSPClient(env, NULL, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum,
 		username, password);
 }
 
-MediaRTSPClient::MediaRTSPClient(UsageEnvironment& env, char const* rtspURL,
+MediaRTSPClient* MediaRTSPClient::createNew(UsageEnvironment& env, MediaRTSPSession* rtspSession, 
+	char const* rtspURL, int verbosityLevel, char const* applicationName, portNumBits tunnelOverHTTPPortNum,
+	const char* username, const char* password) {
+	return new MediaRTSPClient(env, rtspSession, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum,
+		username, password);
+}
+
+MediaRTSPClient::MediaRTSPClient(UsageEnvironment& env, MediaRTSPSession* rtspSession, char const* rtspURL,
 	int verbosityLevel, char const* applicationName, portNumBits tunnelOverHTTPPortNum,
 	const char* username, const char* password)
-	: RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, -1) 
+	: RTSPClient(env, rtspURL, verbosityLevel, applicationName, tunnelOverHTTPPortNum, -1)
 	, fVidRTPSink(NULL)
 	, fAudRTPSink(NULL)
 	, bUpTransport(false)
+	, mediaRTSPSession(rtspSession)
 {
 	if (username && password)
 		ourAuthenticator = new Authenticator(username, password);

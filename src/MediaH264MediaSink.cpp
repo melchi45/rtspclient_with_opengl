@@ -1,4 +1,6 @@
 ﻿#include "MediaH264MediaSink.h"
+#include "FFmpegDecoder.h"
+#include "h264_stream.h"
 
 //#define FILE_SAVE						1
 #define	MAX_FRAMING_SIZE				4
@@ -50,11 +52,28 @@ MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, MediaSubsession& s
 	  fReceiveBuffer[MAX_FRAMING_SIZE - video_framing + 3] = 1;
   }
 #endif
+
+  video_decoder = new FFmpegDecoder();
+  if (video_decoder == NULL)
+  {
+	  env << "Failed to create a FFMpeg Decoder\n";
+  }
+
+  if (video_decoder != NULL) {
+	  video_decoder->initFFMPEG();
+	  //decoder->openDecoder(scs.subsession->videoWidth(), scs.subsession->videoHeight(), ((MediaRTSPClient*)rtspClient)->getRTSPSession());
+  }
 }
 
 MediaH264MediaSink::~MediaH264MediaSink() {
   delete[] fReceiveBuffer;
   delete[] fStreamId;
+
+  if (video_decoder != NULL) {
+	  video_decoder->closeDecoder();
+	  delete video_decoder;
+  }
+  video_decoder = NULL;
 }
 
 void MediaH264MediaSink::afterGettingFrame(void* clientData, unsigned frameSize, unsigned numTruncatedBytes,
@@ -67,6 +86,8 @@ void MediaH264MediaSink::afterGettingFrame(void* clientData, unsigned frameSize,
 //#define DEBUG_PRINT_EACH_RECEIVED_FRAME 1
 #define DEBUG_PRINT_NPT 1
 
+char tempstr[1000] = { 0 };
+char outputstr[100000] = { '\0' };
 
 void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTruncatedBytes,
 				  struct timeval presentationTime, unsigned /*durationInMicroseconds*/) {
@@ -115,6 +136,12 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  start_code_length = 4;
   }
 
+  h264_stream_t* h = h264_new();
+  read_nal_unit(h, &fReceiveBuffer[start_code_length], start_code_length - m_nFrameSize);
+  debug_nal(h, h->nal);
+
+  //envir() << outputstr << "\n";
+
   // https://www.ietf.org/rfc/rfc3984.txt
   // http://egloos.zum.com/yajino/v/782492
   // http://gentlelogic.blogspot.kr/2011/11/exploring-h264-part-2-h264-bitstream.html
@@ -146,6 +173,11 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  if (nNALType == NALTYPE::NALTYPE_IDRPicture)
 	  {
 		  envir() << "I Frame        " << m_nFrameSize << "\n";
+
+		  if (video_decoder != NULL) {
+//			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
+			  video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);
+		  }
 /*		  
 		  envir() << "I Frame      (" << m_nFrameWidth << "x" << m_nFrameHeight << ")         " << m_nFrameSize + frameSize << "\n";
 		  m_nFrameCounter = 0;
@@ -169,6 +201,8 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 		  unsigned long nBytesToCheck = m_nFrameSize - 5;
 		  BYTE nNALTypeSPS;
 		  const unsigned char* pData = (const unsigned char*)fReceiveBuffer;
+//		  int width = ((h->sps->pic_height_in_map_units_minus1 + 1) * 16) + h->sps->frame_crop_bottom_offset * 2 - h->sps->frame_crop_top_offset * 2;
+//		  int Height = ((2 - h->sps->frame_mbs_only_flag)* (h->sps->pic_height_in_map_units_minus1 + 1) * 16) - (h->sps->frame_crop_bottom_offset * 2) - (h->sps->frame_crop_top_offset * 2);
 
 		  // Special Case 1
 		  for (unsigned long n = 0; n < nBytesToCheck; ++n)
@@ -210,11 +244,12 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 			  }*/
 		  }
 		  // Diag
+
 		  envir() << "SPS        " << m_nFrameSize << "\n";
 	  }
 	  else if (nNALType == NALTYPE::NALTYPE_PictureParameterSet)
 	  {
-
+		  envir() << "PPs        " << m_nFrameSize << "\n";
 	  }
 	  else if (nNALType == NALTYPE::NALTYPE_AccessUnitDelimiter)
 	  {
@@ -223,6 +258,12 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  else if (nNALType == NALTYPE::NALTYPE_SliceLayerWithoutPartitioning)
 	  {
 		  envir() << "P Frame        " << m_nFrameSize << "\n";
+
+		  if (video_decoder != NULL) {
+			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
+			  //video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);
+		  }
+
 /*		  m_nFrameCounter++;
 		  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_PFRAME, fReceiveBuffer, m_nFrameSize, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
 		  CalculateFrameRate();
@@ -261,6 +302,8 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 
 	  envir() << "Incomplete Data.......................    \n";
   }
+
+  h264_free(h);
 
 #ifdef FILE_SAVE
   static FILE *fp = fopen("saved.h264", "wb");
