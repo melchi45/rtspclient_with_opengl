@@ -5,6 +5,11 @@
 #include <pthread.h>
 #include "FFmpegDecoder.h"
 
+#define GLFW_INCLUDE_GL3
+#define GLFW_NO_GLU
+#include <GLFW/glfw3.h>
+
+
 class TaskScheduler;
 class UsageEnvironment;
 class RTSPClient;
@@ -44,11 +49,14 @@ private:
 	std::string m_password;
 	int m_debugLevel;
 	int m_port;
+	GLFWwindow* window;
 
 	static void *rtsp_thread_fun(void *param);
+	static void *glfw3_thread_fun(void *param);
 	void rtsp_fun();
+	void glfw3_fun();
 protected:
-	virtual void videoCB(int width, int height, uint8_t* buff, int len);
+	virtual void videoCB(int width, int height, uint8_t* buff, int len, RTSPClient* client);
 };
 
 #endif // _MEDIA_RTSP_SESSION_H_

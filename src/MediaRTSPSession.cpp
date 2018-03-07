@@ -9,6 +9,8 @@
 #include "liveMedia.hh"
 #include "log_utils.h"
 
+#include <gl/GL.h>
+
 #include <map>
 
 //#ifdef DEBUG_PRINT_EACH_RECEIVED_FRAME
@@ -66,6 +68,8 @@ MediaRTSPSession::MediaRTSPSession()
 
 MediaRTSPSession::~MediaRTSPSession()
 {
+	glfwDestroyWindow(window);
+	glfwTerminate();
 }
 
 int MediaRTSPSession::startRTSPClient(const char* progName, const char* rtspURL, 
@@ -87,6 +91,14 @@ int MediaRTSPSession::startRTSPClient(const char* progName, const char* rtspURL,
 		perror("pthread_create()");
 		return -1;
 	}
+	/*
+	int p = pthread_create(&tid, NULL, glfw3_thread_fun, this);
+	if (r)
+	{
+		perror("pthread_create()");
+		return -1;
+	}
+	*/
 	return 0;
 }
 
@@ -100,6 +112,13 @@ void *MediaRTSPSession::rtsp_thread_fun(void *param)
 {
 	MediaRTSPSession *pThis = (MediaRTSPSession*)param;
 	pThis->rtsp_fun();
+	return NULL;
+}
+
+void *MediaRTSPSession::glfw3_thread_fun(void *param)
+{
+	MediaRTSPSession *pThis = (MediaRTSPSession*)param;
+	pThis->glfw3_fun();
 	return NULL;
 }
 
@@ -129,6 +148,76 @@ void MediaRTSPSession::rtsp_fun()
 	delete taskScheduler;
 	taskScheduler = NULL;
 //	m_nStatus = 2;
+}
+
+static void error_callback(int error, const char* description)
+{
+	fputs(description, stderr);
+}
+
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, GL_TRUE);
+}
+
+void MediaRTSPSession::glfw3_fun()
+{
+	// reference
+	// https://gist.github.com/victusfate/9214902
+	// https://github.com/glfw/glfw/tree/master/examples
+	glfwSetErrorCallback(error_callback);
+
+	if (!glfwInit())
+		exit(EXIT_FAILURE);
+
+	// cout << "default shader lang: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
+
+	// select opengl version
+	// int major, minor, rev;
+	// glfwGetVersion(&major, &minor, &rev);
+	// cout << "glfw major.minor " << major << "." << minor << "." << rev << endl;
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
+
+	if (!window)
+	{
+		glfwTerminate();
+		exit(EXIT_FAILURE);
+	}
+	//env << "OpenGL shader language version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
+	glfwSetKeyCallback(window, key_callback);
+
+	while (!glfwWindowShouldClose(window))
+	{
+		float ratio;
+		int width, height;
+		glfwGetFramebufferSize(window, &width, &height);
+		ratio = width / (float)height;
+		glViewport(0, 0, width, height);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glRotatef((float)glfwGetTime() * 50.f, 0.f, 0.f, 1.f);
+		glBegin(GL_TRIANGLES);
+		glColor3f(1.f, 0.f, 0.f);
+		glVertex3f(-0.6f, -0.4f, 0.f);
+		glColor3f(0.f, 1.f, 0.f);
+		glVertex3f(0.6f, -0.4f, 0.f);
+		glColor3f(0.f, 0.f, 1.f);
+		glVertex3f(0.f, 0.6f, 0.f);
+		glEnd();
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+	}
 }
 
 int MediaRTSPSession::openURL(UsageEnvironment& env)
@@ -161,9 +250,44 @@ int MediaRTSPSession::openURL(UsageEnvironment& env)
 	return 0;
 }
 
-void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len)
+void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, RTSPClient* client)
 {
+	if (client != NULL) {
+		UsageEnvironment& env = client->envir(); // alias
+		StreamClientState& scs = ((MediaRTSPClient*)client)->scs; // alias
 
+		scs.subsession = scs.iter->next();
+		if (scs.subsession != NULL) {
+			if (scs.session == NULL) {
+				env << *client << "Failed to create a MediaSession object from the SDP description: " << env.getResultMsg() << "\n";
+			}
+			else if (scs.session->hasSubsessions()) {
+				
+			}
+		}
+		/*
+		glBindTexture(GL_TEXTURE_2D, texture);
+		//gluBuild2DMipmaps(GL_TEXTURE_2D, 3, pCodecCtx->width, pCodecCtx->height, GL_RGB, GL_UNSIGNED_INT, pFrameRGB->data);
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 256, GL_RGB, GL_UNSIGNED_BYTE, buff);
+
+		glColor3f(1, 1, 1);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glBegin(GL_QUADS);
+		glTexCoord2f(0, 1);
+		glVertex3f(0, 0, 0);
+
+		glTexCoord2f(1, 1);
+		glVertex3f(width, 0, 0);
+
+		glTexCoord2f(1, 0);
+		glVertex3f(width, height, 0);
+
+		glTexCoord2f(0, 0);
+		glVertex3f(0, height, 0);
+
+		glEnd();
+		*/
+	}
 }
 
 // Implementation of the RTSP 'response handlers':
@@ -640,8 +764,8 @@ rtp_packet_handler(void *clientData, unsigned char *packet, unsigned &packetSize
 //#endif
 //	}
 	//
-	bandwidth_estimator_update(ssrc, seqnum, tv, timestamp, packetSize);
-	pktloss_monitor_update(ssrc, seqnum);
+//	bandwidth_estimator_update(ssrc, seqnum, tv, timestamp, packetSize);
+//	pktloss_monitor_update(ssrc, seqnum);
 	//
 	return;
 }
@@ -735,7 +859,7 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 						}
 					}
 
-					scs.subsession->sink = MediaH264MediaSink::createNew(env, *scs.subsession, rtspClient->url());
+					scs.subsession->sink = MediaH264MediaSink::createNew(env, rtspClient, *scs.subsession, rtspClient->url());
 					/*scs.subsession->sink = MediaH264VideoRTPSink::createNew(env,
 						scs.subsession,
 						sps, spsSize, pps, ppsSize,

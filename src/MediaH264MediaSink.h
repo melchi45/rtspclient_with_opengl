@@ -12,12 +12,14 @@ class FFmpegDecoder;
 class MediaH264MediaSink : public MediaSink {
 public:
 	static MediaH264MediaSink* createNew(UsageEnvironment& env,
-			MediaSubsession& subsession, // identifies the kind of data that's being received
-			char const* streamId = NULL); // identifies the stream itself (optional)
+		RTSPClient* client,
+		MediaSubsession& subsession, // identifies the kind of data that's being received
+		char const* streamId = NULL); // identifies the stream itself (optional)
 	FFmpegDecoder* getDecoder() { return video_decoder; }
+	long getFrameCount() { return m_nFrameCount; }
 
 private:
-	MediaH264MediaSink(UsageEnvironment& env, MediaSubsession& subsession,
+	MediaH264MediaSink(UsageEnvironment& env, RTSPClient* client, MediaSubsession& subsession,
 			char const* streamId);
 	// called only by "createNew()"
 	virtual ~MediaH264MediaSink();
@@ -30,7 +32,6 @@ private:
 	bool isH264iFrame(u_int8_t* packet);
 	bool FindStartCode3(unsigned char *Buf);
 	bool FindStartCode4(unsigned char *Buf);
-
 private:
 	// redefined virtual functions:
 	virtual Boolean continuePlaying();
@@ -42,6 +43,8 @@ private:
 	unsigned m_nFrameSize;
 	unsigned m_nNalHeaderStartCodeOffset;
 	FFmpegDecoder* video_decoder;
+	long m_nFrameCount;
+	RTSPClient* pClient;
 };
 
 #endif /* _MEDIA_H264_MEDIASINK_H_ */

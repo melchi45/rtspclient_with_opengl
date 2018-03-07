@@ -1,7 +1,7 @@
 #include "FFMpegDecoder.h"
 #include "log_utils.h"
 
-#define SAVE_AVFRAME_TO_JPEG		1
+//#define SAVE_AVFRAME_TO_JPEG		1
 
 static int sws_flags = SWS_BICUBIC;
 
@@ -31,6 +31,7 @@ FFmpegDecoder::FFmpegDecoder()
 	: frame_count(0)
 	, m_bInit(false)
 	, img_convert_ctx(NULL)
+	, pClient(NULL)
 {
 }
 
@@ -183,10 +184,9 @@ int FFmpegDecoder::decode_rtsp_frame(uint8_t* input, int nLen, bool bWaitIFrame 
 #elif defined(SAVE_AVFRAME_TO_JPEG)
 				save_frame_as_jpeg(decoder_picture);
 #endif
-
 				if (m_pCB)
 				{
-					m_pCB->videoCB(decoder_context->width, decoder_context->height, pFrameRGB->data[0], numBytes * sizeof(uint8_t));
+					m_pCB->videoCB(decoder_context->width, decoder_context->height, pFrameRGB->data[0], numBytes * sizeof(uint8_t), pClient);
 				}
 
 				av_free(buffer);
@@ -316,4 +316,9 @@ int FFmpegDecoder::save_frame_as_jpeg(AVFrame *pframe)
 	avformat_free_context(pFormatCtx);
 
 	return 0;
+}
+
+void FFmpegDecoder::setClient(RTSPClient* client)
+{
+	this->pClient = client;
 }

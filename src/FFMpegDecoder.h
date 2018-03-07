@@ -15,11 +15,11 @@ extern "C" {
 //#pragma comment(lib, "avcodec.lib")
 //#pragma comment(lib, "avformat.lib")
 //#pragma comment(lib, "swscale.lib")
-
+class RTSPClient;
 class CDecodeCB
 {
 public:
-	virtual void videoCB(int width, int height, uint8_t* buff, int len) = 0;
+	virtual void videoCB(int width, int height, uint8_t* buff, int len, RTSPClient* pClient) = 0;
 };
 
 class FFmpegDecoder
@@ -29,6 +29,7 @@ public:
 	~FFmpegDecoder();
 	int initFFMPEG();
 	int openDecoder(int width, int height, CDecodeCB* pCB);
+	void setClient(RTSPClient* client);
 	int closeDecoder();
 	int decode_rtsp_frame(uint8_t* input, int nLen, bool bWaitIFrame = false);
 
@@ -47,5 +48,6 @@ private:
 	CDecodeCB* m_pCB;
 	int m_nWidth;
 	int m_nHeight;
+	RTSPClient* pClient;
 };
 #endif // _FFMPEG_DECODER_H_

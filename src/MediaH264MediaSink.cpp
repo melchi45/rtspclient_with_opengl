@@ -28,15 +28,17 @@ typedef enum nal_type {
 	//	NALTYPE_Unspecified = 24,
 } NALTYPE;
 
-MediaH264MediaSink* MediaH264MediaSink::createNew(UsageEnvironment& env, MediaSubsession& subsession, char const* streamId) {
-  return new MediaH264MediaSink(env, subsession, streamId);
+MediaH264MediaSink* MediaH264MediaSink::createNew(UsageEnvironment& env, RTSPClient* client, MediaSubsession& subsession, char const* streamId) {
+  return new MediaH264MediaSink(env, client, subsession, streamId);
 }
 
-MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, MediaSubsession& subsession, char const* streamId)
+MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, RTSPClient* client, MediaSubsession& subsession, char const* streamId)
 	: MediaSink(env)
 	, fSubsession(subsession)
 	, m_nFrameSize(0)
 	, m_nNalHeaderStartCodeOffset(0)
+	, m_nFrameCount(0)
+	, pClient(client)
 {
   fStreamId = strDup(streamId);
 #if H264_WITH_START_CODE
@@ -65,6 +67,9 @@ MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, MediaSubsession& s
 
   if (video_decoder != NULL) {
 	  video_decoder->initFFMPEG();
+	  if (pClient != NULL) {
+		  video_decoder->setClient(pClient);
+	  }
 	  //decoder->openDecoder(scs.subsession->videoWidth(), scs.subsession->videoHeight(), ((MediaRTSPClient*)rtspClient)->getRTSPSession());
   }
 }
@@ -144,8 +149,8 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
   h264_stream_t* h = h264_new();
   read_nal_unit(h, &fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
   debug_nal(h, h->nal);
-#endif
   //envir() << outputstr << "\n";
+#endif
  
   // https://www.ietf.org/rfc/rfc3984.txt
   // http://egloos.zum.com/yajino/v/782492
@@ -177,7 +182,9 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 
 	  if (nNALType == NALTYPE::NALTYPE_IDRPicture)
 	  {
-		  envir() << "I Frame        " << m_nFrameSize << "\n";
+		  ++m_nFrameCount;
+		  envir() << "I Frame, Frame Size: " << m_nFrameSize
+			  << ", Frame Count: " << m_nFrameCount << "\n";
 
 		  if (video_decoder != NULL) {
 //			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
@@ -251,7 +258,7 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  }
 	  else if (nNALType == NALTYPE::NALTYPE_PictureParameterSet)
 	  {
-		  envir() << "PPs        " << m_nFrameSize << "\n";
+		  envir() << "PPS        " << m_nFrameSize << "\n";
 	  }
 	  else if (nNALType == NALTYPE::NALTYPE_AccessUnitDelimiter)
 	  {
@@ -259,8 +266,9 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  }
 	  else if (nNALType == NALTYPE::NALTYPE_SliceLayerWithoutPartitioning)
 	  {
-		  envir() << "P Frame        " << m_nFrameSize << "\n";
-
+		  ++m_nFrameCount;
+		  envir() << "P Frame, Frame Size: " << m_nFrameSize 
+			  << ", Frame Count: " << m_nFrameCount << "\n";
 		  if (video_decoder != NULL) {
 //			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
 			  //video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);
@@ -304,7 +312,6 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 
 	  envir() << "Incomplete Data.......................    \n";
   }
-
   video_decoder->decode_rtsp_frame(fReceiveBuffer, frameSize + start_code_length);
 
 #ifdef ENABLE_NAL_PARSER
