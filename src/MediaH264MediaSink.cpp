@@ -2,11 +2,13 @@
 #include "FFmpegDecoder.h"
 #include "h264_stream.h"
 
-//#define FILE_SAVE						1
-#define	MAX_FRAMING_SIZE				4
-#define H264_WITH_START_CODE			1
-#define H264_NAL_HEADER_STARTCODE_LENGTH 4
-#define DUMMY_SINK_RECEIVE_BUFFER_SIZE	2764800
+//#define ENABLE_NAL_PARSER					1
+//#define FILE_SAVE							1
+#define	MAX_FRAMING_SIZE					4
+#define H264_WITH_START_CODE				1
+//#define H264_NAL_HEADER_STARTCODE_LENGTH	4
+//#define DUMMY_SINK_RECEIVE_BUFFER_SIZE	2764800
+#define DUMMY_SINK_RECEIVE_BUFFER_SIZE		1000000
 
 typedef enum nal_type {
 	NALTYPE_Unspecified = 0,
@@ -33,24 +35,26 @@ MediaH264MediaSink* MediaH264MediaSink::createNew(UsageEnvironment& env, MediaSu
 MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, MediaSubsession& subsession, char const* streamId)
 	: MediaSink(env)
 	, fSubsession(subsession)
-	, video_framing(0)
 	, m_nFrameSize(0)
 	, m_nNalHeaderStartCodeOffset(0)
 {
   fStreamId = strDup(streamId);
-  fReceiveBuffer = new u_int8_t[MAX_FRAMING_SIZE+DUMMY_SINK_RECEIVE_BUFFER_SIZE];
-  memset(fReceiveBuffer, 0, MAX_FRAMING_SIZE+DUMMY_SINK_RECEIVE_BUFFER_SIZE);
 #if H264_WITH_START_CODE
+  fReceiveBuffer = new u_int8_t[MAX_FRAMING_SIZE + DUMMY_SINK_RECEIVE_BUFFER_SIZE];
+  memset(fReceiveBuffer, 0, MAX_FRAMING_SIZE + DUMMY_SINK_RECEIVE_BUFFER_SIZE);
+
   // setup framing if necessary
   // H264 framing code
-  if (strcmp("H264", fSubsession.codecName()) == 0 || 
+  if (strcmp("H264", fSubsession.codecName()) == 0 ||
 	  strcmp("H265", fSubsession.codecName()) == 0) {
-	  video_framing = 4;
-	  fReceiveBuffer[MAX_FRAMING_SIZE - video_framing + 0]
-		  = fReceiveBuffer[MAX_FRAMING_SIZE - video_framing + 1]
-		  = fReceiveBuffer[MAX_FRAMING_SIZE - video_framing + 2] = 0;
-	  fReceiveBuffer[MAX_FRAMING_SIZE - video_framing + 3] = 1;
+	  fReceiveBuffer[0]
+		  = fReceiveBuffer[1]
+		  = fReceiveBuffer[2] = 0;
+	  fReceiveBuffer[3] = 1;
   }
+#else
+  fReceiveBuffer = new u_int8_t[DUMMY_SINK_RECEIVE_BUFFER_SIZE];
+  memset(fReceiveBuffer, 0, DUMMY_SINK_RECEIVE_BUFFER_SIZE);
 #endif
 
   video_decoder = new FFmpegDecoder();
@@ -126,6 +130,7 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 // if (isH264iFrame(fReceiveBuffer)) {
 //	  envir() << "I-Frame\n";
 //  }
+
   int start_code_length = 0;
   // check 3 byte start code
   if (FindStartCode3(fReceiveBuffer)) {
@@ -135,13 +140,13 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
   if (FindStartCode4(fReceiveBuffer)) {
 	  start_code_length = 4;
   }
-
+#ifdef ENABLE_NAL_PARSER
   h264_stream_t* h = h264_new();
-  read_nal_unit(h, &fReceiveBuffer[start_code_length], start_code_length - m_nFrameSize);
+  read_nal_unit(h, &fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
   debug_nal(h, h->nal);
-
+#endif
   //envir() << outputstr << "\n";
-
+ 
   // https://www.ietf.org/rfc/rfc3984.txt
   // http://egloos.zum.com/yajino/v/782492
   // http://gentlelogic.blogspot.kr/2011/11/exploring-h264-part-2-h264-bitstream.html
@@ -155,17 +160,17 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  int nNALType = fReceiveBuffer[start_code_length] & 0x1F;
 
 	  bool bNalHeaderPresent = false;
-	  if ((nNALType == 0) && (m_nFrameSize >= start_code_length + start_code_length))
+	  if ((nNALType == 0) && (m_nFrameSize >= start_code_length))
 	  {      // Most of the cameras sending the frames without nal header start code, however some cameras  send the frame with start code
 			 // Since we initialized the buffer with start code, we need to skip that. 
 			 // We are reinitilzing without nal header start code, we will execute this code only for the first frame
-		  nNALType = fReceiveBuffer[start_code_length + start_code_length] & 0x1F;
+		  nNALType = fReceiveBuffer[start_code_length] & 0x1F;
 
 		  // First make sure we have valid NAL Type
 		  if (nNALType == NALTYPE::NALTYPE_IDRPicture || nNALType == NALTYPE::NALTYPE_SEI || nNALType == NALTYPE::NALTYPE_SequenceParameterSet
 			  || nNALType == NALTYPE::NALTYPE_PictureParameterSet || nNALType == NALTYPE::NALTYPE_AccessUnitDelimiter || nNALType == NALTYPE::NALTYPE_SliceLayerWithoutPartitioning)
 		  {
-			  memmove(fReceiveBuffer, fReceiveBuffer + start_code_length, m_nFrameSize - start_code_length);
+			  memmove(fReceiveBuffer, fReceiveBuffer + start_code_length, m_nFrameSize + start_code_length);
 			  bNalHeaderPresent = true;
 		  }
 	  }
@@ -176,19 +181,18 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 
 		  if (video_decoder != NULL) {
 //			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
-			  video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);
+//			  video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);
 		  }
-/*		  
-		  envir() << "I Frame      (" << m_nFrameWidth << "x" << m_nFrameHeight << ")         " << m_nFrameSize + frameSize << "\n";
-		  m_nFrameCounter = 0;
+		  
+//		  envir() << "I Frame      (" << m_nFrameWidth << "x" << m_nFrameHeight << ")         " << m_nFrameSize + frameSize << "\n";
+//		  m_nFrameCounter = 0;
 
-		  if (m_nConfigLength)
-			  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_CONFIG, m_pConfig, m_nConfigLength, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
-		  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_IFRAME, fReceiveBuffer, m_nFrameSize, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
-		  DisplayDiagnosticsInfo(m_nFrameSize);
-		  CalculateFrameRate();
-		  CalculateIFrameInterval(true);
-*/
+//		  if (m_nConfigLength)
+//			  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_CONFIG, m_pConfig, m_nConfigLength, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
+//		  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_IFRAME, fReceiveBuffer, m_nFrameSize, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
+//		  DisplayDiagnosticsInfo(m_nFrameSize);
+//		  CalculateFrameRate();
+//		  CalculateIFrameInterval(true);
 	  }
 	  else if (nNALType == NALTYPE::NALTYPE_SEI)
 	  {
@@ -223,25 +227,23 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 
 		  if (nEndOfConfigData < m_nFrameSize)
 		  {
-/*
-			  m_nFrameCounter = 0;
+//			  m_nFrameCounter = 0;
 
-			  if (m_nConfigLength)
-				  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_CONFIG, fReceiveBuffer, nEndOfConfigData, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
-			  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_IFRAME, fReceiveBuffer + nEndOfConfigData, m_nFrameSize - nEndOfConfigData, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
-			  DisplayDiagnosticsInfo(m_nFrameSize);
-			  CalculateFrameRate();
-			  CalculateIFrameInterval(true);
-*/
+//			  if (m_nConfigLength)
+//				  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_CONFIG, fReceiveBuffer, nEndOfConfigData, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
+//			  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_IFRAME, fReceiveBuffer + nEndOfConfigData, m_nFrameSize - nEndOfConfigData, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
+//			  DisplayDiagnosticsInfo(m_nFrameSize);
+//			  CalculateFrameRate();
+//			  CalculateIFrameInterval(true);
 		  }
 		  else
 		  {      // This is normal case, most of the cameras
-/*			  if (m_pConfig == NULL && m_nFrameSize)
-			  {
-				  m_nConfigLength = m_nFrameSize;
-				  m_pConfig = new uint8_t[m_nConfigLength];
-				  memcpy(m_pConfig, fReceiveBuffer, m_nConfigLength);
-			  }*/
+//			  if (m_pConfig == NULL && m_nFrameSize)
+//			  {
+//				  m_nConfigLength = m_nFrameSize;
+//				  m_pConfig = new uint8_t[m_nConfigLength];
+//				  memcpy(m_pConfig, fReceiveBuffer, m_nConfigLength);
+//			  }
 		  }
 		  // Diag
 
@@ -260,14 +262,14 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 		  envir() << "P Frame        " << m_nFrameSize << "\n";
 
 		  if (video_decoder != NULL) {
-			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
+//			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
 			  //video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);
 		  }
 
-/*		  m_nFrameCounter++;
-		  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_PFRAME, fReceiveBuffer, m_nFrameSize, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
-		  CalculateFrameRate();
-		  CalculateIFrameInterval(false);*/
+//		  m_nFrameCounter++;
+//		  m_pCamera->Add2FrameQueue(CC_SAMPLETYPE_MPEG4AVC_PFRAME, fReceiveBuffer, m_nFrameSize, m_nFrameWidth, m_nFrameHeight, m_nFrameCounter);
+//		  CalculateFrameRate();
+//		  CalculateIFrameInterval(false);*/
 	  }
 	  else
 	  {
@@ -303,7 +305,11 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  envir() << "Incomplete Data.......................    \n";
   }
 
+  video_decoder->decode_rtsp_frame(fReceiveBuffer, frameSize + start_code_length);
+
+#ifdef ENABLE_NAL_PARSER
   h264_free(h);
+#endif
 
 #ifdef FILE_SAVE
   static FILE *fp = fopen("saved.h264", "wb");
@@ -325,14 +331,14 @@ Boolean MediaH264MediaSink::continuePlaying() {
   // Request the next frame of data from our input source.  "afterGettingFrame()" will get called later, when it arrives:
 #if H264_WITH_START_CODE
   fSource->getNextFrame(fReceiveBuffer + MAX_FRAMING_SIZE,
-	  DUMMY_SINK_RECEIVE_BUFFER_SIZE,
+	  DUMMY_SINK_RECEIVE_BUFFER_SIZE + MAX_FRAMING_SIZE,
       afterGettingFrame, this,
       onSourceClosure, this);
 #else
-fSource->getNextFrame(fReceiveBuffer, DUMMY_SINK_RECEIVE_BUFFER_SIZE,
-	afterGettingFrame, this,
-	onSourceClosure, this);
-
+  fSource->getNextFrame(fReceiveBuffer, 
+	  DUMMY_SINK_RECEIVE_BUFFER_SIZE,
+	  afterGettingFrame, this,
+	  onSourceClosure, this);
 #endif
   return True;
 }

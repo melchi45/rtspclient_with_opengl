@@ -31,11 +31,17 @@ public:
 	int openDecoder(int width, int height, CDecodeCB* pCB);
 	int closeDecoder();
 	int decode_rtsp_frame(uint8_t* input, int nLen, bool bWaitIFrame = false);
+
+private:
+	int save_frame_as_jpeg(AVFrame *pframe);
+	int save_frame_as_ppm(AVFrame *pframe);
+
 private:
 	bool m_bInit;
 	AVCodec *decoder;
 	AVCodecContext *decoder_context;
 	AVFrame *decoder_picture;
+	long	frame_count;
 //	AVFormatContext *format_context;
 	struct SwsContext *img_convert_ctx;
 	CDecodeCB* m_pCB;

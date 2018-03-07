@@ -153,6 +153,7 @@ if ( WIN32 )
 else()
 	link_directories( ${CMAKE_BINARY_DIR}/${LIVE555} )
 endif()
+link_directories ( ${CMAKE_LIBRARY_PATH} )
 
 set ( ${PROJECT_NAME}_LINK_LIBRARIES "" )
 if ( WIN32 )

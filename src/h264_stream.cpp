@@ -28,16 +28,8 @@
 #include "h264_sei.h"
 
 FILE* h264_dbgfile = NULL;
-//存放信息的字符串
-//char* tempstr=(char *)malloc(1000);
 extern char tempstr[1000];
-//char* outputstr=(char *)malloc(100000);
 extern char outputstr[100000];
-//#define printf(...) fprintf((h264_dbgfile == NULL ? stdout : h264_dbgfile), __VA_ARGS__)
-//MFC下控制台输出
-//#define printf(...) TRACE( __VA_ARGS__)
-//组合成适合MFC的字符串
-//注意MFC中EditControl的换行符是\r\n，需要单独添加
 #define printf(...) sprintf( tempstr,__VA_ARGS__);\
 	strcat(tempstr,"\r\n");						\
 	strcat(outputstr,tempstr);

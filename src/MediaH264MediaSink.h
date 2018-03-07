@@ -39,7 +39,6 @@ private:
 	u_int8_t* fReceiveBuffer;
 	MediaSubsession& fSubsession;
 	char* fStreamId;
-	int video_framing;
 	unsigned m_nFrameSize;
 	unsigned m_nNalHeaderStartCodeOffset;
 	FFmpegDecoder* video_decoder;
