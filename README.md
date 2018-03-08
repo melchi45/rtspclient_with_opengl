@@ -145,6 +145,20 @@ for sdl2 dependency
 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_STANDARD_LIBRARIES="user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib dinput8.lib dxguid.lib dxerr.lib kernel32.lib winspool.lib shell32.lib comdlg32.lib advapi32.lib vcruntimed.lib ucrtd.lib"
 ```
 
+## build for Linux
+```
+mkdir linux
+cd linux
+export OUT_PATH=./install
+cmake .. -G "Unix Makefiles" \
+	-DBUILD_SHARED_LIBS=ON \
+	-DCMAKE_VERBOSE_MAKEFILE=ON \
+	-DCMAKE_BUILD_TYPE=release \
+	-DCMAKE_INSTALL_PREFIX=${OUT_PATH}
+make;make install
+```
+
+
 ## Reference
 http://roxlu.com/2014/039/decoding-h264-and-yuv420p-playback
 http://www.voidcn.com/article/p-tlcacfpn-bs.html
