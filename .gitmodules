@@ -7,3 +7,6 @@
 [submodule "vcpkg"]
 	path = vcpkg
 	url = https://github.com/melchi45/vcpkg.git
+[submodule "cmake"]
+	path = cmake
+	url = https://github.com/melchi45/cmake.git
