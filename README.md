@@ -79,6 +79,25 @@ Check packages list with
 .\vcpkg list
 ```
 
+## depencency package for linux
+For OpenGL
+```
+sudo apt-get install libgl-dev
+sudo apt-get install mesa-common-dev
+sudo apt-get install libglu1-mesa-dev freeglut3-dev mesa-common-dev libgl1-mesa-dev
+sudo apt-get install libxi-dev build-essential libdbus-1-dev libfontconfig1-dev libfreetype6-dev libx11-dev
+apt-get install libqt4-dev zlib1g-dev libqt4-opengl-dev
+```
+
+For FFMpeg
+```
+sudo apt install libavcodec-dev libavformat-dev libavdevice-dev
+```
+
+For SDL2
+```
+sudo apt-get install libsdl2-2.0 libsdl2-dev
+```
 
 ## build executable
 
