@@ -88,8 +88,8 @@ int MediaRTSPSession::startRTSPClient(const char* progName, const char* rtspURL,
 	const char* username, const char* password,
 	bool bInterleaved, bool bTransportStream)
 {
-	this->m_username = std::string(username);
-	this->m_password = std::string(password);
+	if (username != NULL) this->m_username = std::string(username);
+	if (password != NULL) this->m_password = std::string(password);
 	this->m_progName = std::string(progName);
 	this->m_rtspUrl = std::string(rtspURL);
 	this->bTransportStream = bTransportStream;
