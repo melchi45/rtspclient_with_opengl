@@ -1,8 +1,7 @@
 # rtspclient_with_opengl
 RTSP Client with live555 and opengl
 
-
-
+![test application image](https://github.com/melchi45/rtspclient_with_opengl/blob/master/capture.png?raw=true)
 
 http://www.gregwessels.com/dev/2017/10/27/ffmpeg-x265.html
 
