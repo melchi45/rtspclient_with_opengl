@@ -70,7 +70,7 @@ ${${LIVE555}_GROUP_SOCK_HEADER_DIR} ${${LIVE555}_LIVE_MEDIA_HEADER_DIR} )
 
 message ( "LIVE555_HEADER_FILES = ${LIVE555_HEADER_FILES}" )
 
-if ( WIN32 )
+#if ( WIN32 )
 set ( THREADS_USE_PTHREADS_WIN32 TRUE )
 find_package(Threads REQUIRED)
 
@@ -78,7 +78,7 @@ message ( "THREADS_PTHREADS_INCLUDE_DIR = ${THREADS_PTHREADS_INCLUDE_DIR}" )
 message ( "THREADS_PTHREADS_WIN32_LIBRARY = ${THREADS_PTHREADS_WIN32_LIBRARY}" )
 message ( "CMAKE_THREAD_LIBS_INIT = ${CMAKE_THREAD_LIBS_INIT}" )
 
-endif ( WIN32)
+#endif ( WIN32)
 
 #include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
 #target_link_libraries(foo ${CMAKE_THREAD_LIBS_INIT})
@@ -230,13 +230,13 @@ file(GLOB TEST_DECODER_HDR_FILES
 source_group("Source Files" FILES ${TEST_DECODER_SRC_FILES})
 source_group("Header Files" FILES ${TEST_DECODER_HDR_FILES})
 
-add_executable( ${TEST_DECODE} ${TEST_DECODER_SRC_FILES} ${TEST_DECODER_HDR_FILES} )
-target_include_directories( ${TEST_DECODE} PRIVATE ${LIVE555_HEADER_FILES} )
-target_include_directories( ${TEST_DECODE} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
-target_include_directories( ${TEST_DECODE} PRIVATE ${PROJECT_SOURCE_DIR}/src)
+#add_executable( ${TEST_DECODE} ${TEST_DECODER_SRC_FILES} ${TEST_DECODER_HDR_FILES} )
+#target_include_directories( ${TEST_DECODE} PRIVATE ${LIVE555_HEADER_FILES} )
+#target_include_directories( ${TEST_DECODE} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
+#target_include_directories( ${TEST_DECODE} PRIVATE ${PROJECT_SOURCE_DIR}/src)
 #target_include_directories( ${TEST_DECODE} PRIVATE ${GLFW3_INCLUDE_PATH} )
-target_include_directories( ${TEST_DECODE} PRIVATE ${${TINYLIB}_HOME}/src )
-target_link_libraries( ${TEST_DECODE} ${FFMPEG_LIBRARIES} )
+#target_include_directories( ${TEST_DECODE} PRIVATE ${${TINYLIB}_HOME}/src )
+#target_link_libraries( ${TEST_DECODE} ${FFMPEG_LIBRARIES} )
 #target_link_libraries( ${TEST_DECODE} ${GLFW_LIBRARIES} )
 
 #-r rtsp://192.168.123.37/profile5/media.smp -u admin 1
