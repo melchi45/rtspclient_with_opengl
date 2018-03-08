@@ -14,6 +14,7 @@
 #if defined(USE_GLFW_LIB)
 #define GLFW_INCLUDE_GL3
 #define GLFW_NO_GLU
+#include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #elif defined(USE_SDL2_LIB)
 #include <SDL2/SDL.h>

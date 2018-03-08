@@ -9,8 +9,6 @@
 #include "liveMedia.hh"
 #include "log_utils.h"
 
-#include <gl/GL.h>
-
 #include <map>
 
 //#ifdef DEBUG_PRINT_EACH_RECEIVED_FRAME
