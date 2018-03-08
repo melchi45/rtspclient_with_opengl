@@ -3,12 +3,6 @@ RTSP Client with live555 and opengl
 
 ![test application image](https://github.com/melchi45/rtspclient_with_opengl/blob/master/capture.png?raw=true)
 
-http://www.gregwessels.com/dev/2017/10/27/ffmpeg-x265.html
-
-https://github.com/FFmpeg/FFmpeg
-
-https://www.arkeon.be/trunk/dependencies/CMake/Packages/FindFFmpeg.cmake
-
 ## Overview
 Vcpkg helps you get C and C++ libraries on Windows. This tool and ecosystem are currently in a preview state; your involvement is vital to its success.
 
