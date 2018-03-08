@@ -99,7 +99,7 @@ sudo apt-get install -y libavcodec-dev libavformat-dev libavdevice-dev
 sudo apt-get install -y libsdl2-2.0 libsdl2-dev
 ```
 
-## build executable for Windows
+## Build for Windows
 
 Build with IDE
 ```
@@ -145,7 +145,7 @@ for sdl2 dependency
 -DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_STANDARD_LIBRARIES="user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib dinput8.lib dxguid.lib dxerr.lib kernel32.lib winspool.lib shell32.lib comdlg32.lib advapi32.lib vcruntimed.lib ucrtd.lib"
 ```
 
-## build for Linux
+## Build for Linux
 ```
 mkdir linux
 cd linux
@@ -156,6 +156,20 @@ cmake .. -G "Unix Makefiles" \
 	-DCMAKE_BUILD_TYPE=release \
 	-DCMAKE_INSTALL_PREFIX=${OUT_PATH}
 make;make install
+```
+
+## Executable binary
+How to usage 
+
+-r: RTSP Camera or Video Server URL like on wowza media server rtsp://<server ip>:1935/vod/sample.mp4
+-u: account for authentication using username and password
+-i: Interleaved mode for TCP channel for single port for audio, video and texture data
+-U: Transport upstream mode using RTSP ANNOUNCE and RECORD option. this mode support video upload to media server to media.
+
+./rtspclient_with_opengl -r <rtsp url> -u username password -i -Unix
+
+```
+./rtspclient_with_opengl -r rtsp://example.com:1935/vod/sample.mp4 -u admin password
 ```
 
 
