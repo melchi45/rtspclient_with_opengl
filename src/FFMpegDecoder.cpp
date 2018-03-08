@@ -246,7 +246,8 @@ int FFmpegDecoder::save_frame_as_ppm(AVFrame *pframe)
 int FFmpegDecoder::save_frame_as_jpeg(AVFrame *pframe)
 {
 	char szFilename[32];
-	sprintf_s(szFilename, sizeof(szFilename), "frame_%06ld.jpg", frame_count);
+	//sprintf_s(szFilename, sizeof(szFilename), "frame_%06ld.jpg", frame_count);
+	sprintf(szFilename, "frame_%06ld.jpg", frame_count);
 
 	AVFormatContext* pFormatCtx = avformat_alloc_context();
 

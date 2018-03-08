@@ -1,5 +1,5 @@
 ﻿#include "MediaH264MediaSink.h"
-#include "FFmpegDecoder.h"
+#include "FFMpegDecoder.h"
 #include "h264_stream.h"
 
 //#define ENABLE_NAL_PARSER					1
@@ -210,7 +210,7 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 		  // Some Cameras send I frame with Config Data , process those cases
 		  unsigned long nEndOfConfigData = m_nFrameSize + 1;
 		  unsigned long nBytesToCheck = m_nFrameSize - 5;
-		  BYTE nNALTypeSPS;
+		  u_int8_t nNALTypeSPS;
 		  const unsigned char* pData = (const unsigned char*)fReceiveBuffer;
 //		  int width = ((h->sps->pic_height_in_map_units_minus1 + 1) * 16) + h->sps->frame_crop_bottom_offset * 2 - h->sps->frame_crop_top_offset * 2;
 //		  int Height = ((2 - h->sps->frame_mbs_only_flag)* (h->sps->pic_height_in_map_units_minus1 + 1) * 16) - (h->sps->frame_crop_bottom_offset * 2) - (h->sps->frame_crop_top_offset * 2);
@@ -267,8 +267,7 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  else if (nNALType == NALTYPE::NALTYPE_SliceLayerWithoutPartitioning)
 	  {
 		  ++m_nFrameCount;
-		  envir() << "P Frame, Frame Size: " << m_nFrameSize 
-			  << ", Frame Count: " << m_nFrameCount << "\n";
+		  envir() << "P Frame, Frame Size: " << m_nFrameSize << ", Frame Count: " << m_nFrameCount << "\n";
 		  if (video_decoder != NULL) {
 //			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
 			  //video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);

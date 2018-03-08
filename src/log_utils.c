@@ -90,7 +90,7 @@ static void log_rtspPrintf(char* fmt, ...)
 	struct tm t;
 	time_t ct = time(NULL);
 	localtime_r(&ct, &t);
-	timeval tmv;
+	struct timeval tmv;
 	gettimeofday(&tmv, NULL);
 
 	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in [%d:%08X]  ", "[rtsp]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, getpid(), pthread_mach_thread_np(pthread_self()));
@@ -167,7 +167,7 @@ static void log_infoPrintf(char* fmt, ...)
 	struct tm t;
 	time_t ct = time(NULL);
 	localtime_r(&ct, &t);
-	timeval tmv;
+	struct timeval tmv;
 	gettimeofday(&tmv, NULL);
 
 	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[info]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
@@ -246,7 +246,7 @@ static void log_debugPrintf(char* fmt, ...)
 	struct tm t;
 	time_t ct = time(NULL);
 	localtime_r(&ct, &t);
-	timeval tmv;
+	struct timeval tmv;
 	gettimeofday(&tmv, NULL);
 
 	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[debug]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
@@ -325,7 +325,7 @@ static void log_warningPrintf(char* fmt, ...)
 	struct tm t;
 	time_t ct = time(NULL);
 	localtime_r(&ct, &t);
-	timeval tmv;
+	struct timeval tmv;
 	gettimeofday(&tmv, NULL);
 
 	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[warning]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
@@ -404,7 +404,7 @@ static void log_errorPrintf(char* fmt, ...)
 	struct tm t;
 	time_t ct = time(NULL);
 	localtime_r(&ct, &t);
-	timeval tmv;
+	struct timeval tmv;
 	gettimeofday(&tmv, NULL);
 
 	nLen = snprintf(szOut, nRemainBufLen, "%9s %04d-%02d-%02d %02d:%02d:%02d.%06d in %s:(%d):%s[%d:%08X]  ", "[error]", t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec, tmv.tv_usec / 100000, __FILENAME__, __LINE__, __FUNCTION__, getpid(), pthread_mach_thread_np(pthread_self()));
