@@ -3,7 +3,7 @@
 
 #include <string>
 #include <pthread.h>
-#include "FFmpegDecoder.h"
+#include "FFMpegDecoder.h"
 
 #define USE_SDL2_LIB	1
 //#define USE_GLFW_LIB	0

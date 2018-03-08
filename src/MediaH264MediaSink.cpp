@@ -184,7 +184,7 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  {
 		  ++m_nFrameCount;
 		  envir() << "I Frame, Frame Size: " << m_nFrameSize
-			  << ", Frame Count: " << m_nFrameCount << "\n";
+			  << ", Frame Count: " << (int)m_nFrameCount << "\n";
 
 		  if (video_decoder != NULL) {
 //			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
@@ -267,7 +267,7 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 	  else if (nNALType == NALTYPE::NALTYPE_SliceLayerWithoutPartitioning)
 	  {
 		  ++m_nFrameCount;
-		  envir() << "P Frame, Frame Size: " << m_nFrameSize << ", Frame Count: " << m_nFrameCount << "\n";
+		  envir() << "P Frame, Frame Size: " << m_nFrameSize << ", Frame Count: " << (int)m_nFrameCount << "\n";
 		  if (video_decoder != NULL) {
 //			  video_decoder->decode_rtsp_frame(&fReceiveBuffer[start_code_length], m_nFrameSize - start_code_length);
 			  //video_decoder->decode_rtsp_frame(fReceiveBuffer, m_nFrameSize);
