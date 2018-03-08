@@ -5,6 +5,7 @@
 #ifndef WIN32
 #include <syslog.h>
 #include <sys/time.h>
+#include <pthread.h>	// for pthread_mach_thread_np, pthread_self
 #else
 #include <process.h>
 #include <windows.h>
