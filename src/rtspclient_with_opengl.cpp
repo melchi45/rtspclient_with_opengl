@@ -1,13 +1,14 @@
 #include <iostream>
 #include <signal.h> // for signal
+#ifdef WIN32
+#include <windows.h>	// for using the function Sleep
+#else
+#include <stdlib.h>     // for using the function sleep
+#include <unistd.h>		// for sleep
+#endif
+
 #include "MediaRTSPSession.h"
 #include "log_utils.h"
-
-#ifdef WIN32
-#include <windows.h>	//for using the function Sleep
-#else
-#include <stdlib.h>     //for using the function sleep
-#endif
 
 //char eventLoopWatchVariable = 0;
 char* username = NULL;
