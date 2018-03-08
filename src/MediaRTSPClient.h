@@ -97,4 +97,4 @@ public:
 
 };
 
-#endif _MEDIA_RTSP_CLIENT_H_
+#endif // _MEDIA_RTSP_CLIENT_H_
