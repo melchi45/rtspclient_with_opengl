@@ -61,6 +61,13 @@ MediaRTSPSession::MediaRTSPSession()
 	, m_progName("")
 	, m_rtspUrl("")
 	, m_debugLevel(0)
+#if defined(USE_GLFW_LIB)
+	, window(NULL)
+#elif defined(USE_SDL2_LIB)
+	, window(NULL)
+	, renderer(NULL)
+	, texture(NULL)
+#endif
 {
 	m_running = false;
 	eventLoopWatchVariable = 0;
@@ -68,8 +75,15 @@ MediaRTSPSession::MediaRTSPSession()
 
 MediaRTSPSession::~MediaRTSPSession()
 {
+#ifdef USE_GLFW_LIB
 	glfwDestroyWindow(window);
 	glfwTerminate();
+#endif
+
+#ifdef USE_SDL2_LIB
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+#endif
 }
 
 int MediaRTSPSession::startRTSPClient(const char* progName, const char* rtspURL, 
@@ -91,14 +105,23 @@ int MediaRTSPSession::startRTSPClient(const char* progName, const char* rtspURL,
 		perror("pthread_create()");
 		return -1;
 	}
-	/*
+#ifdef USE_GLFW_LIB	
 	int p = pthread_create(&tid, NULL, glfw3_thread_fun, this);
 	if (r)
 	{
 		perror("pthread_create()");
 		return -1;
 	}
-	*/
+#endif
+#ifdef USE_SDL2_LIB
+	int p = pthread_create(&tid, NULL, sdl2_thread_fun, this);
+	if (r)
+	{
+		perror("pthread_create()");
+		return -1;
+	}
+
+#endif
 	return 0;
 }
 
@@ -115,12 +138,23 @@ void *MediaRTSPSession::rtsp_thread_fun(void *param)
 	return NULL;
 }
 
+#ifdef USE_GLFW_LIB
 void *MediaRTSPSession::glfw3_thread_fun(void *param)
 {
 	MediaRTSPSession *pThis = (MediaRTSPSession*)param;
 	pThis->glfw3_fun();
 	return NULL;
 }
+#endif
+
+#ifdef USE_SDL2_LIB
+void *MediaRTSPSession::sdl2_thread_fun(void *param)
+{
+	MediaRTSPSession *pThis = (MediaRTSPSession*)param;
+	pThis->sdl2_fun();
+	return NULL;
+}
+#endif
 
 void MediaRTSPSession::rtsp_fun()
 {
@@ -149,7 +183,7 @@ void MediaRTSPSession::rtsp_fun()
 	taskScheduler = NULL;
 //	m_nStatus = 2;
 }
-
+#ifdef USE_GLFW_LIB
 static void error_callback(int error, const char* description)
 {
 	fputs(description, stderr);
@@ -168,8 +202,10 @@ void MediaRTSPSession::glfw3_fun()
 	// https://github.com/glfw/glfw/tree/master/examples
 	glfwSetErrorCallback(error_callback);
 
-	if (!glfwInit())
-		exit(EXIT_FAILURE);
+	if (!glfwInit()) {
+		return;
+		//exit(EXIT_FAILURE);
+	}
 
 	// cout << "default shader lang: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 
@@ -188,7 +224,8 @@ void MediaRTSPSession::glfw3_fun()
 	if (!window)
 	{
 		glfwTerminate();
-		exit(EXIT_FAILURE);
+		return;
+		//exit(EXIT_FAILURE);
 	}
 	//env << "OpenGL shader language version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 	glfwSetKeyCallback(window, key_callback);
@@ -219,6 +256,61 @@ void MediaRTSPSession::glfw3_fun()
 		glfwPollEvents();
 	}
 }
+#endif
+
+#ifdef USE_SDL2_LIB
+void MediaRTSPSession::sdl2_fun()
+{
+	// reference
+	// https://gist.github.com/armornick/3434362#file-openicon-c-L29
+
+	// Initialize SDL.
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+		return;
+		//exit(EXIT_FAILURE);
+	}
+
+	// create the window and renderer
+	// note that the renderer is accelerated
+	window = SDL_CreateWindow("Image Loading", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOWS_WIDTH, WINDOWS_HEIGHT, SDL_WINDOW_RESIZABLE);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+
+	// load our image
+//	img = IMG_LoadTexture(renderer, IMG_PATH);
+//	SDL_QueryTexture(img, NULL, NULL, &w, &h); // get the width and height of the texture
+											   // put the location where we want the texture to be drawn into a rectangle
+											   // I'm also scaling the texture 2x simply by setting the width and height
+//	SDL_Rect texr; texr.x = WIDTH / 2; texr.y = HEIGHT / 2; texr.w = w * 2; texr.h = h * 2;
+
+	// main loop
+	while (1) {
+		// event handling
+		SDL_Event event;
+		if (SDL_PollEvent(&event)) {
+			if (event.type == SDL_QUIT)
+				break;
+			else if (event.type == SDL_WINDOWEVENT)
+			{
+				if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+				{
+					//resize = true;
+				}
+			}
+			else if (event.type == SDL_KEYUP && event.key.keysym.sym == SDLK_ESCAPE)
+				break;
+		}
+
+		// clear the screen
+//		SDL_RenderClear(renderer);
+		// copy the texture to the rendering context
+//		SDL_RenderCopy(renderer, img, NULL, &texr);
+		// flip the backbuffer
+		// this means that everything that we prepared behind the screens is actually shown
+//		SDL_RenderPresent(renderer);
+
+	}
+}
+#endif
 
 int MediaRTSPSession::openURL(UsageEnvironment& env)
 {
@@ -250,7 +342,7 @@ int MediaRTSPSession::openURL(UsageEnvironment& env)
 	return 0;
 }
 
-void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, RTSPClient* client)
+void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, int pitch, RTSPClient* client)
 {
 	if (client != NULL) {
 		UsageEnvironment& env = client->envir(); // alias
@@ -265,6 +357,7 @@ void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, RT
 				
 			}
 		}
+
 		/*
 		glBindTexture(GL_TEXTURE_2D, texture);
 		//gluBuild2DMipmaps(GL_TEXTURE_2D, 3, pCodecCtx->width, pCodecCtx->height, GL_RGB, GL_UNSIGNED_INT, pFrameRGB->data);
@@ -287,6 +380,33 @@ void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, RT
 
 		glEnd();
 		*/
+
+#ifdef USE_SDL2_LIB
+//#if 0
+		//SDL_Rect texr; texr.x = WINDOWS_WIDTH / 2; texr.y = WINDOWS_HEIGHT / 2; texr.w = width * 2; texr.h = height * 2;
+		SDL_Rect texure_rect; texure_rect.x = 0; texure_rect.y = 0; texure_rect.w = width; texure_rect.h = height;
+		SDL_Rect windows_rect; windows_rect.x = 0; windows_rect.y = 0; windows_rect.w = WINDOWS_WIDTH; windows_rect.h = WINDOWS_HEIGHT;
+
+		texture = SDL_CreateTexture(
+			renderer,
+			SDL_PIXELFORMAT_RGB24,
+			SDL_TEXTUREACCESS_STREAMING,
+			width,
+			height);
+
+		if (!texture) {
+
+		}
+
+		SDL_UpdateTexture(texture, NULL, buff, pitch);
+
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, texture, &texure_rect, &windows_rect);
+		SDL_RenderPresent(renderer);
+
+		if (texture)
+			SDL_DestroyTexture(texture);
+#endif
 	}
 }
 

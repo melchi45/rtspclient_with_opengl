@@ -19,7 +19,7 @@ class RTSPClient;
 class CDecodeCB
 {
 public:
-	virtual void videoCB(int width, int height, uint8_t* buff, int len, RTSPClient* pClient) = 0;
+	virtual void videoCB(int width, int height, uint8_t* buff, int len, int pitch, RTSPClient* pClient) = 0;
 };
 
 class FFmpegDecoder

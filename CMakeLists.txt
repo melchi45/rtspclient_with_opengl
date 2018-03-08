@@ -112,8 +112,14 @@ endif()
 #	include_directories(${X264_INCLUDE_DIRS})
 #endif()
 
-#find_package(SDL2 REQUIRED)
+find_package(SDL2 REQUIRED)
+
+if(SDL2_FOUND)
 #include_directories(${SDL2_INCLUDE_DIR})
+message("Found SDL2 libraries")
+message("SDL2_INCLUDE_DIR = ${SDL2_INCLUDE_DIR} ")
+message("SDL2_LIBRARY = ${SDL2_LIBRARY} ")
+endif ()
 
 #find_package(SDL2_ttf REQUIRED)
 #include_directories(${SDL2_TTF_INCLUDE_DIR})
@@ -190,6 +196,7 @@ target_include_directories( ${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${THREADS_PTHREADS_INCLUDE_DIR} )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${${TINYLIB}_HOME}/src )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIRS} )
+target_include_directories( ${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIR} )
 
 target_link_libraries( ${PROJECT_NAME} ${LIVE555} )
 target_link_libraries( ${PROJECT_NAME} ${FFMPEG_LIBRARIES} )
@@ -198,6 +205,7 @@ target_link_libraries( ${PROJECT_NAME} ${SWSCALE_LIBRARIES} )
 target_link_libraries( ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries( ${PROJECT_NAME} ${GLFW_LIBRARIES} )
 target_link_libraries( ${PROJECT_NAME} ${OPENGL_LIBRARIES} )
+target_link_libraries( ${PROJECT_NAME} ${SDL2_LIBRARY} )
 
 if ( BUILD_SHARED_LIBS )
 	target_compile_definitions(${PROJECT_NAME} PRIVATE LIVEMEDIA_IMPORTS)
@@ -242,9 +250,9 @@ add_custom_command (
 )
 endif ()
 
-add_custom_command (
-    TARGET ${TEST_DECODE}
-    POST_BUILD
-    COMMAND ${TEST_DECODE}
-    COMMENT "Execute ${TEST_DECODE}"
-)
+#add_custom_command (
+#    TARGET ${TEST_DECODE}
+#    POST_BUILD
+#    COMMAND ${TEST_DECODE}
+#    COMMENT "Execute ${TEST_DECODE}"
+#)

@@ -5,10 +5,20 @@
 #include <pthread.h>
 #include "FFmpegDecoder.h"
 
+#define USE_SDL2_LIB	1
+//#define USE_GLFW_LIB	0
+
+#define WINDOWS_WIDTH	640
+#define WINDOWS_HEIGHT	360
+
+#if defined(USE_GLFW_LIB)
 #define GLFW_INCLUDE_GL3
 #define GLFW_NO_GLU
 #include <GLFW/glfw3.h>
-
+#elif defined(USE_SDL2_LIB)
+#include <SDL2/SDL.h>
+//#include <SDL2/SDL_image.h>
+#endif
 
 class TaskScheduler;
 class UsageEnvironment;
@@ -49,14 +59,27 @@ private:
 	std::string m_password;
 	int m_debugLevel;
 	int m_port;
+#if defined(USE_GLFW_LIB)
+	// variable declarations for glfw
 	GLFWwindow* window;
+#elif defined(USE_SDL2_LIB)
+	// variable declarations for sdl2
+	SDL_Window* window;
+	SDL_Renderer* renderer;
+	SDL_Texture* texture;
+#endif
 
 	static void *rtsp_thread_fun(void *param);
-	static void *glfw3_thread_fun(void *param);
 	void rtsp_fun();
+#if defined(USE_GLFW_LIB)
+	static void *glfw3_thread_fun(void *param);
 	void glfw3_fun();
+#elif defined(USE_SDL2_LIB)
+	static void *sdl2_thread_fun(void *param);
+	void sdl2_fun();
+#endif
 protected:
-	virtual void videoCB(int width, int height, uint8_t* buff, int len, RTSPClient* client);
+	virtual void videoCB(int width, int height, uint8_t* buff, int len, int pitch, RTSPClient* client);
 };
 
 #endif // _MEDIA_RTSP_SESSION_H_

@@ -161,6 +161,9 @@ int FFmpegDecoder::decode_rtsp_frame(uint8_t* input, int nLen, bool bWaitIFrame 
 				int numBytes = avpicture_get_size(AV_PIX_FMT_RGB24, decoder_context->width, decoder_context->height);
 				uint8_t * buffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
 
+				// YUV to RGB Color
+				// reference
+				// https://gist.github.com/lkraider/832062
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 45, 101)
 				AVFrame *pFrameRGB = av_frame_alloc();
 #else
@@ -186,7 +189,8 @@ int FFmpegDecoder::decode_rtsp_frame(uint8_t* input, int nLen, bool bWaitIFrame 
 #endif
 				if (m_pCB)
 				{
-					m_pCB->videoCB(decoder_context->width, decoder_context->height, pFrameRGB->data[0], numBytes * sizeof(uint8_t), pClient);
+					int pitch = pFrameRGB->linesize[0];
+					m_pCB->videoCB(decoder_context->width, decoder_context->height, pFrameRGB->data[0], numBytes * sizeof(uint8_t), pitch, pClient);
 				}
 
 				av_free(buffer);
