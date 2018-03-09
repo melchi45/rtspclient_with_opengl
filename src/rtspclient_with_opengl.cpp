@@ -29,7 +29,7 @@ void usage(char const* progName) {
 
 int main(int argc, char** argv) {
 	pRtsp = new MediaRTSPSession;
-
+	bool option_param = false;
 	// We need at least one "rtsp://" URL argument:
 	if (argc < 2) {
 		usage(argv[0]);
@@ -39,17 +39,23 @@ int main(int argc, char** argv) {
 	while (argc > 2) {
 		char* const opt = argv[1];
 
-		if (opt[0] != '-') {
+		if (opt[0] != '-' && !option_param) {
 			usage(argv[0]);
+			option_param = false;
 		}
 
 		switch (opt[1]) {
 		case 'r':
 			rtsp_url = argv[2];
+
+			std::cout << "RTSP Url: " << rtsp_url << "\n";
+
+			option_param = true;
 			break;
 		case 'U':
 			// specify start port number
 			bUpStream = true;
+			option_param = true;
 			break;
 		case 'u':
 			// specify start port number
@@ -58,13 +64,17 @@ int main(int argc, char** argv) {
 
 			std::cout << "Username: " << username << "\n";
 			std::cout << "Password: " << password << "\n";
+
+			option_param = true;
 			break;
 		case 'f': 
 			filename = argv[2];
 			std::cout << "File Name: " << filename << "\n";
+			option_param = true;
 			 break;
 		case 'i':
 			bInterleaved = true;
+			option_param = true;
 			break;
 		default:
 			break;

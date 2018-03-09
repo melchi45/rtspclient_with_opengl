@@ -12,13 +12,14 @@
 #define WINDOWS_HEIGHT	360
 
 #if defined(USE_GLFW_LIB)
+// reference
+// https://medium.com/@Plimsky/how-to-install-a-opengl-environment-on-ubuntu-e3918cf5ab6c
 #define GLFW_INCLUDE_GL3
 #define GLFW_NO_GLU
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 #elif defined(USE_SDL2_LIB)
 #include <SDL2/SDL.h>
-//#include <SDL2/SDL_image.h>
 #endif
 
 class TaskScheduler;
