@@ -3,10 +3,9 @@
 
 #include <string>
 #include <pthread.h>
-#include "FFMpegDecoder.h"
+#include <vector>		// for std::vector
 
-#define USE_SDL2_LIB	1
-//#define USE_GLFW_LIB	0
+#include "FFMpegDecoder.h"
 
 #define WINDOWS_WIDTH	640
 #define WINDOWS_HEIGHT	360
@@ -14,9 +13,12 @@
 #if defined(USE_GLFW_LIB)
 // reference
 // https://medium.com/@Plimsky/how-to-install-a-opengl-environment-on-ubuntu-e3918cf5ab6c
-#define GLFW_INCLUDE_GL3
-#define GLFW_NO_GLU
-#include <GL/gl.h>
+#ifdef __APPLE__
+#include <OpenGL/gl3.h>
+#else
+#include <GL/glew.h>
+#endif
+
 #include <GLFW/glfw3.h>
 #elif defined(USE_SDL2_LIB)
 #include <SDL2/SDL.h>
@@ -61,9 +63,22 @@ private:
 	std::string m_password;
 	int m_debugLevel;
 	int m_port;
+
+	typedef struct buffer {
+		int width;
+		int height;
+		int length;
+		uint8_t*	data;
+		int pitch;
+	} rgb_buffer;
+
+	std::vector<rgb_buffer> myvector;
+
 #if defined(USE_GLFW_LIB)
+	GLuint camera_texture;
 	// variable declarations for glfw
 	GLFWwindow* window;
+
 #elif defined(USE_SDL2_LIB)
 	// variable declarations for sdl2
 	SDL_Window* window;

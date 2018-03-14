@@ -9,10 +9,12 @@
 #include "liveMedia.hh"
 #include "log_utils.h"
 
+#include <iostream>		// for std::cout, std::endl
 #include <map>
 
 //#ifdef DEBUG_PRINT_EACH_RECEIVED_FRAME
 #define RCVBUF_SIZE		2097152
+#define TEX_ID			0
 
 char const* clientProtocolName = "RTSP";
 
@@ -182,6 +184,17 @@ void MediaRTSPSession::rtsp_fun()
 //	m_nStatus = 2;
 }
 #ifdef USE_GLFW_LIB
+static void resize_callback(GLFWwindow* window, int width, int height) {
+//	if (player_ptr) {
+//		player_ptr->resize(width, height);
+//	}
+}
+static void button_callback(GLFWwindow* win, int bt, int action, int mods) {
+	double x, y;
+	if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+		glfwGetCursorPos(win, &x, &y);
+	}
+}
 static void error_callback(int error, const char* description)
 {
 	fputs(description, stderr);
@@ -192,6 +205,10 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 }
+
+static void cursor_callback(GLFWwindow* win, double x, double y) { }
+
+static void char_callback(GLFWwindow* win, unsigned int key) { }
 
 void MediaRTSPSession::glfw3_fun()
 {
@@ -208,16 +225,16 @@ void MediaRTSPSession::glfw3_fun()
 	// cout << "default shader lang: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 
 	// select opengl version
-	// int major, minor, rev;
-	// glfwGetVersion(&major, &minor, &rev);
-	// cout << "glfw major.minor " << major << "." << minor << "." << rev << endl;
+	int major, minor, rev;
+	glfwGetVersion(&major, &minor, &rev);
+	std::cout << "glfw major.minor " << major << "." << minor << "." << rev << std::endl;
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	window = glfwCreateWindow(640, 480, "Simple example", NULL, NULL);
+	window = glfwCreateWindow(WINDOWS_WIDTH, WINDOWS_HEIGHT, "Simple example", NULL, NULL);
 
 	if (!window)
 	{
@@ -226,22 +243,82 @@ void MediaRTSPSession::glfw3_fun()
 		//exit(EXIT_FAILURE);
 	}
 	//env << "OpenGL shader language version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
+	glfwSetFramebufferSizeCallback(window, resize_callback);
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetCharCallback(window, char_callback);
+	glfwSetCursorPosCallback(window, cursor_callback);
+	glfwSetMouseButtonCallback(window, button_callback);
+	glfwMakeContextCurrent(window);
+//	glfwSwapInterval(1);
+	glGenTextures(1, &camera_texture);
 
-	while (!glfwWindowShouldClose(window))
+	while (!glfwWindowShouldClose(window) && !myvector.empty())
 	{
 		float ratio;
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 		ratio = width / (float)height;
 		glViewport(0, 0, width, height);
-		glClear(GL_COLOR_BUFFER_BIT);
-		glMatrixMode(GL_PROJECTION);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+/*		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		glOrtho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		glRotatef((float)glfwGetTime() * 50.f, 0.f, 0.f, 1.f);
+	*/	
+		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
+		glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+		glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+		glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+		std::cout << "vector size: " << myvector.size() << std::endl;
+
+		if (myvector.size() > 10) {
+			std::vector<rgb_buffer>::iterator it = myvector.begin();
+			rgb_buffer buffer = *it;
+			width = buffer.width;
+			height = buffer.height;
+
+			if (buffer.data != NULL) {
+				// Attach a name to the texture for later use
+				//glBindTexture(GL_TEXTURE_2D, TEX_ID);
+				glBindTexture(GL_TEXTURE_2D, camera_texture);
+				// Define how pixels are packed in arrays
+				//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, buffer.width, buffer.height, 0, GL_RGB, GL_UNSIGNED_BYTE, buffer.data);
+				//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_BGR, GL_UNSIGNED_BYTE, buffer.data);
+			
+				free(buffer.data);
+			}
+
+			myvector.erase(it);
+		}
+		/*
+		//glColor3f(1, 1, 1);
+		glBindTexture(GL_TEXTURE_2D, camera_texture);
+		glBegin(GL_QUADS);
+		glTexCoord2f(0, 1);
+		glVertex3f(0, 0, 0);
+
+		glTexCoord2f(1, 1);
+		glVertex3f(width, 0, 0);
+
+		glTexCoord2f(1, 0);
+		glVertex3f(width, height, 0);
+
+		glTexCoord2f(0, 0);
+		glVertex3f(0, height, 0);
+
+		glEnd();
+		*/
+
+/*		glRotatef((float)glfwGetTime() * 50.f, 0.f, 0.f, 1.f);
 		glBegin(GL_TRIANGLES);
 		glColor3f(1.f, 0.f, 0.f);
 		glVertex3f(-0.6f, -0.4f, 0.f);
@@ -249,7 +326,8 @@ void MediaRTSPSession::glfw3_fun()
 		glVertex3f(0.6f, -0.4f, 0.f);
 		glColor3f(0.f, 0.f, 1.f);
 		glVertex3f(0.f, 0.6f, 0.f);
-		glEnd();
+		glEnd();*/
+		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -273,13 +351,6 @@ void MediaRTSPSession::sdl2_fun()
 	window = SDL_CreateWindow("Image Loading", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOWS_WIDTH, WINDOWS_HEIGHT, SDL_WINDOW_RESIZABLE);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
-	// load our image
-//	img = IMG_LoadTexture(renderer, IMG_PATH);
-//	SDL_QueryTexture(img, NULL, NULL, &w, &h); // get the width and height of the texture
-											   // put the location where we want the texture to be drawn into a rectangle
-											   // I'm also scaling the texture 2x simply by setting the width and height
-//	SDL_Rect texr; texr.x = WIDTH / 2; texr.y = HEIGHT / 2; texr.w = w * 2; texr.h = h * 2;
-
 	// main loop
 	while (1) {
 		// event handling
@@ -298,14 +369,41 @@ void MediaRTSPSession::sdl2_fun()
 				break;
 		}
 
-		// clear the screen
-//		SDL_RenderClear(renderer);
-		// copy the texture to the rendering context
-//		SDL_RenderCopy(renderer, img, NULL, &texr);
-		// flip the backbuffer
-		// this means that everything that we prepared behind the screens is actually shown
-//		SDL_RenderPresent(renderer);
+		std::cout << "vector size: " << myvector.size() << std::endl;
+		if (myvector.size() > 10) {
+			std::vector<rgb_buffer>::iterator it = myvector.begin();
+			rgb_buffer buffer = *it;
 
+			if (buffer.data != NULL) {
+				//SDL_Rect texr; texr.x = WINDOWS_WIDTH / 2; texr.y = WINDOWS_HEIGHT / 2; texr.w = width * 2; texr.h = height * 2;
+				SDL_Rect texure_rect; texure_rect.x = 0; texure_rect.y = 0; texure_rect.w = buffer.width; texure_rect.h = buffer.height;
+				SDL_Rect windows_rect; windows_rect.x = 0; windows_rect.y = 0; windows_rect.w = WINDOWS_WIDTH; windows_rect.h = WINDOWS_HEIGHT;
+
+				texture = SDL_CreateTexture(
+					renderer,
+					SDL_PIXELFORMAT_RGB24,
+					SDL_TEXTUREACCESS_STREAMING,
+					buffer.width,
+					buffer.height);
+
+				if (!texture) {
+
+				}
+
+				SDL_UpdateTexture(texture, NULL, buffer.data, buffer.pitch);
+
+				SDL_RenderClear(renderer);
+				SDL_RenderCopy(renderer, texture, &texure_rect, &windows_rect);
+				SDL_RenderPresent(renderer);
+
+				if (texture)
+					SDL_DestroyTexture(texture);
+
+				free(buffer.data);
+			}
+
+			myvector.erase(it);
+		}
 	}
 }
 #endif
@@ -356,55 +454,20 @@ void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, in
 			}
 		}
 
-		/*
-		glBindTexture(GL_TEXTURE_2D, texture);
-		//gluBuild2DMipmaps(GL_TEXTURE_2D, 3, pCodecCtx->width, pCodecCtx->height, GL_RGB, GL_UNSIGNED_INT, pFrameRGB->data);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 512, 256, GL_RGB, GL_UNSIGNED_BYTE, buff);
-
-		glColor3f(1, 1, 1);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glBegin(GL_QUADS);
-		glTexCoord2f(0, 1);
-		glVertex3f(0, 0, 0);
-
-		glTexCoord2f(1, 1);
-		glVertex3f(width, 0, 0);
-
-		glTexCoord2f(1, 0);
-		glVertex3f(width, height, 0);
-
-		glTexCoord2f(0, 0);
-		glVertex3f(0, height, 0);
-
-		glEnd();
-		*/
-
-#ifdef USE_SDL2_LIB
-//#if 0
-		//SDL_Rect texr; texr.x = WINDOWS_WIDTH / 2; texr.y = WINDOWS_HEIGHT / 2; texr.w = width * 2; texr.h = height * 2;
-		SDL_Rect texure_rect; texure_rect.x = 0; texure_rect.y = 0; texure_rect.w = width; texure_rect.h = height;
-		SDL_Rect windows_rect; windows_rect.x = 0; windows_rect.y = 0; windows_rect.w = WINDOWS_WIDTH; windows_rect.h = WINDOWS_HEIGHT;
-
-		texture = SDL_CreateTexture(
-			renderer,
-			SDL_PIXELFORMAT_RGB24,
-			SDL_TEXTUREACCESS_STREAMING,
-			width,
-			height);
-
-		if (!texture) {
-
+		// copy to buffer vector
+		if (buff != NULL) {
+			rgb_buffer buffer;
+			buffer.width = width;
+			buffer.height = height;
+			buffer.pitch = pitch;
+			buffer.length = len;
+			//buffer.data = buff;
+			uint8_t* image_data = (uint8_t *)malloc(len * sizeof(uint8_t));
+			memset(image_data, 0x00, len * sizeof(uint8_t));
+			memcpy(image_data, buff, len * sizeof(uint8_t));
+			buffer.data = image_data;
+			myvector.push_back(buffer);
 		}
-
-		SDL_UpdateTexture(texture, NULL, buff, pitch);
-
-		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, &texure_rect, &windows_rect);
-		SDL_RenderPresent(renderer);
-
-		if (texture)
-			SDL_DestroyTexture(texture);
-#endif
 	}
 }
 

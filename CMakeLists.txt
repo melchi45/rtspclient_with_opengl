@@ -4,7 +4,6 @@ set ( PROJECT_NAME rtspclient_with_opengl )
 set ( TEST_DECODE testDecode )
 set ( LIVE555 live555 )
 set ( TINYLIB tinylib )
-#set ( SDL2 sdl2 )
 
 # https://www.microsoft.com/en-us/download/details.aspx?id=6812
 # set DXSDK_DIR=C:\Tools/DXSDK
@@ -19,11 +18,8 @@ if ( NOT DEFINED BUILD_SHARED_LIBS )
 endif ()
 
 add_subdirectory( ${LIVE555} )
-#add_subdirectory( ${SDL2} )
-#add_subdirectory( ${PROJECT_NAME} )
 
-
-set ( PROJECT_NAME rtspclient_with_opengl )
+#set ( PROJECT_NAME rtspclient_with_opengl )
 set ( ${PROJECT_NAME}_HOME ${CMAKE_CURRENT_SOURCE_DIR} )
 message("SourceDir: " ${${PROJECT_NAME}_HOME} )
 
@@ -45,16 +41,6 @@ endif()
 
 set ( ${LIVE555}_HOME ${${PROJECT_NAME}_HOME}/${LIVE555} )
 set ( ${TINYLIB}_HOME ${${PROJECT_NAME}_HOME}/${TINYLIB} )
-
-MESSAGE ("TINYLIB_HOME = ${${TINYLIB}_HOME}" )
-FIND_PATH(TINYLIB_INCLUDE_DIRS tinylib.h
-  HINTS
-    ${PC_LIBTINYLIB_INCLUDEDIR}
-    ${PC_LIBTINYLIB_INCLUDE_DIRS}
-  PATH_SUFFIXES
-    ${${TINYLIB}_HOME}/src
-)
-message("TINYLIB_INCLUDE_DIRS include dir = ${TINYLIB_INCLUDE_DIRS}")
 
 #message("LM_SENSORS include dir = ${LM_SENSORS_INCLUDE_DIR}")
 
@@ -83,55 +69,113 @@ message ( "CMAKE_THREAD_LIBS_INIT = ${CMAKE_THREAD_LIBS_INIT}" )
 #include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
 #target_link_libraries(foo ${CMAKE_THREAD_LIBS_INIT})
 
-find_package(OpenGL REQUIRED)
-if(OPENGL_FOUND)
-message("OPENGL_LIBRARIES = ${OPENGL_LIBRARIES} ")
-message("OPENGL_INCLUDE_DIRS = ${OPENGL_INCLUDE_DIRS} ")
-endif()
-
 #find_package(GLUT)
 
- #find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE SWSCALE REQUIRED)
 find_package(FFmpeg REQUIRED)
-
 if(FFMPEG_FOUND)
   message("Found FFMPEG/LibAV libraries")
   message("FFMPEG_INCLUDE_DIRS = ${FFMPEG_INCLUDE_DIRS} ")
   message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
   message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
   
-  if( SWSCALE_FOUND)
+  if( SWSCALE_FOUND )
 	message("Found SWSCALE_LIBRARIES = ${SWSCALE_LIBRARIES}")
   endif()
-else()
+  
+  if( SWRESAMPLE_FOUND )
+	message("Found SWRESAMPLE_LIBRARIES = ${SWRESAMPLE_LIBRARIES}")
+  endif()
+  
+  if( AVDEVICE_FOUND )
+	message("Found AVDEVICE_LIBRARIES = ${AVDEVICE_LIBRARIES}")
+  endif()
+  
+  if( AVFILTER_FOUND )
+	message("Found AVFILTER_LIBRARIES = ${AVFILTER_LIBRARIES}")
+  endif()
+  
+  if( POSTPROC_FOUND )
+	message("Found POSTPROC_LIBRARIES = ${POSTPROC_LIBRARIES}")
+  endif()
+else( FFMPEG_FOUND )
     message(FATAL_ERROR "FFMPEG not found")
-endif()
+endif( FFMPEG_FOUND )
+
 
 #find_package(X264 REQUIRED)
 #if(X264_FOUND)
 #	include_directories(${X264_INCLUDE_DIRS})
 #endif()
 
-find_package(SDL2 REQUIRED)
-
-if(SDL2_FOUND)
-#include_directories(${SDL2_INCLUDE_DIR})
-message("Found SDL2 libraries")
-message("SDL2_INCLUDE_DIR = ${SDL2_INCLUDE_DIR} ")
-message("SDL2_LIBRARY = ${SDL2_LIBRARY} ")
+if ( NOT DEFINED USE_SDL2_LIBS )
+   set ( USE_SDL2_LIBS TRUE )
 endif ()
 
-#find_package(SDL2_ttf REQUIRED)
-#include_directories(${SDL2_TTF_INCLUDE_DIR})
+if ( USE_SDL2_LIBS )
+  message(STATUS "Use SDL2 Library for Renderer windows")
+  set(USE_SDL2_LIBS TRUE)
+  find_package(SDL2 REQUIRED)
+  if(SDL2_FOUND)
+    #include_directories(${SDL2_INCLUDE_DIR})
+    message("Found SDL2 libraries")
+    message("SDL2_INCLUDE_DIR = ${SDL2_INCLUDE_DIR} ")
+    message("SDL2_LIBRARY = ${SDL2_LIBRARY} ")
+  endif ()
+  
+  #find_package(SDL2_ttf REQUIRED)
+  #include_directories(${SDL2_TTF_INCLUDE_DIR})
 
-#find_package(SDL2_image REQUIRED)
-#include_directories(${SDL2_IMAGE_INCLUDE_DIR})
+  #find_package(SDL2_image REQUIRED)
+  #include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 
-find_package(GLFW3) # First try to find using the find_package method (works with vcpkg)
-if(GLFW_FOUND) # Works with some other methods
-	message(STATUS "GLFW3_INCLUDE_PATH=${GLFW3_INCLUDE_PATH}")
-	message(STATUS "GLFW_LIBRARIES=${GLFW_LIBRARIES}")
-endif()
+  add_definitions(-DUSE_SDL2_LIB)
+else ( )
+  set(USE_GLFW_LIB TRUE)
+  message(STATUS "Use OpenGL/GLFW Library for Renderer windows")
+  find_package(OpenGL REQUIRED)
+  if(OPENGL_FOUND)
+    message("OPENGL_LIBRARIES = ${OPENGL_LIBRARIES} ")
+    message("OPENGL_INCLUDE_DIRS = ${OPENGL_INCLUDE_DIRS} ")
+  endif()
+
+  find_package(GLEW REQUIRED) # First try to find using the find_package method (works with vcpkg)
+  if(GLEW_FOUND) # Works with some other methods
+  	message(STATUS "GLEW_INCLUDE_PATH=${GLEW_INCLUDE_PATH}")
+  	message(STATUS "GLEW_LIBRARIES=${GLEW_LIBRARIES}")
+  endif()
+  
+  find_package(GLFW3 REQUIRED) # First try to find using the find_package method (works with vcpkg)
+  if(GLFW_FOUND) # Works with some other methods
+  	message(STATUS "GLFW3_INCLUDE_PATH=${GLFW3_INCLUDE_PATH}")
+  	message(STATUS "GLFW_LIBRARIES=${GLFW_LIBRARIES}")
+  endif()
+  
+  #message (STATUS "TINYLIB_HOME = ${${TINYLIB}_HOME}" )
+  find_path(
+    TINYLIB_INCLUDE_DIR
+    NAMES "tinylib.h"
+    PATHS "${${TINYLIB}_HOME}/src"
+  )
+  
+  # Define GLFW_LIBRARIES and GLFW_INCLUDE_DIRS
+  if ( DEFINED TINYLIB_INCLUDE_DIR )
+  	set(TINYLIB_INCLUDE_DIRS ${TINYLIB_INCLUDE_DIR})
+  	add_definitions(-DROXLU_USE_LOG)
+  	add_definitions(-DROXLU_USE_MATH)
+  	add_definitions(-DROXLU_USE_PNG)
+  	add_definitions(-DROXLU_USE_OPENGL)
+  	add_definitions(-DROXLU_IMPLEMENTATION)
+  	message(STATUS "TINYLIB_INCLUDE_DIRS include dir = ${TINYLIB_INCLUDE_DIRS}")
+	
+	find_package(PNG REQUIRED)
+	if(PNG_FOUND)
+      message(STATUS "PNG library = ${PNG_LIBRARIES}")
+	endif()
+  endif()
+ 
+  add_definitions(-DUSE_GLFW_LIB)
+endif ( )
+
 
 if ( WIN32 )
    list ( APPEND ${PROJECT_NAME}_DEFINITIONS
@@ -153,7 +197,8 @@ add_definitions ( ${${PROJECT_NAME}_DEFINITIONS} )
 if(MSVC)
     add_definitions(/FI"export.h")
 	add_definitions(-DWITH_OPENCV2)
-	add_definitions(-D_CONSOLE)	
+	add_definitions(-D_CONSOLE)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 else()
     # GCC or Clang
     add_definitions(-include export.h)
@@ -182,7 +227,8 @@ set(HDR_EXT_PATTERN ".h")
 
 # get all *.cpp files from src to build target
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*${CXX_SRC_EXT_PATTERN} ${PROJECT_SOURCE_DIR}/src/*${C_SRC_EXT_PATTERN})
-file(GLOB HDR_FILES ${PROJECT_SOURCE_DIR}/src/*${HDR_EXT_PATTERN})
+file(GLOB HDR_FILES ${PROJECT_SOURCE_DIR}/src/*${HDR_EXT_PATTERN} )
+
 # makes source and header files group
 source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${HDR_FILES})
@@ -192,20 +238,35 @@ add_executable(${PROJECT_NAME} ${SRC_FILES} ${HDR_FILES})
 
 target_include_directories( ${PROJECT_NAME} PRIVATE ${LIVE555_HEADER_FILES} )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
-#target_include_directories( ${PROJECT_NAME} SYSTEM PRIVATE ${SDL2_INCLUDE_DIR} )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${THREADS_PTHREADS_INCLUDE_DIR} )
+
+if(USE_GLFW_LIB)
 target_include_directories( ${PROJECT_NAME} PRIVATE ${${TINYLIB}_HOME}/src )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIRS} )
-target_include_directories( ${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIR} )
+endif ()
 
-target_link_libraries( ${PROJECT_NAME} ${LIVE555} )
-target_link_libraries( ${PROJECT_NAME} ${FFMPEG_LIBRARIES} )
-target_link_libraries( ${PROJECT_NAME} ${SWSCALE_LIBRARIES} )
-#target_link_libraries( ${PROJECT_NAME} ${SDL2_LIBRARY} )
-target_link_libraries( ${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries( ${PROJECT_NAME} ${GLFW_LIBRARIES} )
-target_link_libraries( ${PROJECT_NAME} ${OPENGL_LIBRARIES} )
-target_link_libraries( ${PROJECT_NAME} ${SDL2_LIBRARY} )
+if(USE_SDL2_LIBS)
+target_include_directories( ${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIR} )
+endif ()
+
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${LIVE555} )
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${FFMPEG_LIBRARIES} )
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${SWSCALE_LIBRARIES} )
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+
+if(USE_GLFW_LIB)
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLFW_LIBRARIES} )
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLEW_LIBRARIES} )
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${OPENGL_LIBRARIES} )
+endif ()
+
+if(USE_SDL2_LIBS)
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${SDL2_LIBRARY} )
+endif ()
+
+if(PNG_FOUND)
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${PNG_LIBRARIES})
+endif()
 
 if ( BUILD_SHARED_LIBS )
 	target_compile_definitions(${PROJECT_NAME} PRIVATE LIVEMEDIA_IMPORTS)

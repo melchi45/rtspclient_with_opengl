@@ -28,7 +28,7 @@ void usage(char const* progName) {
 }
 
 int main(int argc, char** argv) {
-	pRtsp = new MediaRTSPSession;
+	pRtsp = new MediaRTSPSession();
 	bool option_param = false;
 	// We need at least one "rtsp://" URL argument:
 	if (argc < 2) {
