@@ -21,6 +21,12 @@
 #define _snprintf snprintf
 #endif
 
+//extern char tempstr[1000];
+//extern char outputstr[100000];
+//#define printf(...) sprintf( tempstr,__VA_ARGS__);\
+//	strcat(tempstr,"\r\n");						\
+//	strcat(outputstr,tempstr);
+
 #ifndef BOOL_H_
 #define BOOL_H_
 

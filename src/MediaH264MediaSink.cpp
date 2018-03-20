@@ -59,7 +59,7 @@ MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, RTSPClient* client
   memset(fReceiveBuffer, 0, DUMMY_SINK_RECEIVE_BUFFER_SIZE);
 #endif
 
-  video_decoder = new FFmpegDecoder();
+  video_decoder = new FFmpegDecoder(env);
   if (video_decoder == NULL)
   {
 	  env << "Failed to create a FFMpeg Decoder\n";
@@ -303,7 +303,6 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 
 	  if (nNALType == NALTYPE::NALTYPE_SEI)
 	  {
-
 		  // Ignore the packet, we don't need SEI motion detection data
 		  m_nFrameSize = start_code_length;
 		  envir() << "SEI without Marker       " << m_nFrameSize << "\n";

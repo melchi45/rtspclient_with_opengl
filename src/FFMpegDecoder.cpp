@@ -1,5 +1,6 @@
 #include "FFMpegDecoder.h"
-#include "log_utils.h"
+//#include "log_utils.h"
+#include "liveMedia.hh"
 
 //#define SAVE_AVFRAME_TO_JPEG		1
 
@@ -20,21 +21,14 @@ static int sws_flags = SWS_BICUBIC;
 #define AV_PIX_FMT_YUV420P PIX_FMT_YUV420P
 #endif
 
-extern char tempstr[1000];
-extern char outputstr[100000];
-#define printf(...) sprintf( tempstr,__VA_ARGS__);\
-	strcat(tempstr,"\r\n");						\
-	strcat(outputstr,tempstr);
-
-
-FFmpegDecoder::FFmpegDecoder()
+FFmpegDecoder::FFmpegDecoder(UsageEnvironment& env)
 	: frame_count(0)
 	, m_bInit(false)
 	, img_convert_ctx(NULL)
 	, pClient(NULL)
+	, fEnviron(env)
 {
 }
-
 
 FFmpegDecoder::~FFmpegDecoder()
 {
@@ -74,7 +68,8 @@ int FFmpegDecoder::openDecoder(int width, int height, CDecodeCB* pCB)
 	decoder = avcodec_find_decoder(AV_CODEC_ID_H264);
 	if (!decoder)
 	{
-		log_error("codec not found");
+		//log_error("codec not found");
+		fEnviron << "codec not found";
 		return -2;
 	}
 
@@ -82,7 +77,8 @@ int FFmpegDecoder::openDecoder(int width, int height, CDecodeCB* pCB)
 	decoder_context = avcodec_alloc_context3(decoder);
 	if (!decoder_context)
 	{
-		log_error("codec context not found");
+		//log_error("codec context not found");
+		fEnviron << "codec context not found";
 		return -3;
 	}
 //	decoder_context->codec_id = AV_CODEC_ID_H264;
@@ -100,7 +96,8 @@ int FFmpegDecoder::openDecoder(int width, int height, CDecodeCB* pCB)
 
 	if (avcodec_open2(decoder_context, decoder, NULL) < 0)
 	{
-		log_error("could not open codec");
+		//log_error("could not open codec");
+		fEnviron << "could not open codec";
 		return -4;
 	}
 	m_bInit = true;
@@ -175,7 +172,8 @@ int FFmpegDecoder::decode_rtsp_frame(uint8_t* input, int nLen, bool bWaitIFrame 
 					decoder_context->width, decoder_context->height, decoder_context->pix_fmt, decoder_context->width, decoder_context->height, AV_PIX_FMT_RGB24, sws_flags, NULL, NULL, NULL);
 				if (img_convert_ctx == NULL)
 				{
-					log_error("Cannot initialize the conversion context");
+					//log_error("Cannot initialize the conversion context");
+					fEnviron << "Cannot initialize the conversion context";
 					//exit(1);
 					return -4;
 				}
@@ -253,7 +251,8 @@ int FFmpegDecoder::save_frame_as_jpeg(AVFrame *pframe)
 
 	pFormatCtx->oformat = av_guess_format("mjpeg", NULL, NULL);
 	if (avio_open(&pFormatCtx->pb, szFilename, AVIO_FLAG_READ_WRITE) < 0) {
-		printf("Couldn't open output file.");
+		//printf("Couldn't open output file.");
+		fEnviron << "Couldn't open output file.";
 		return -1;
 	}
 
@@ -278,11 +277,13 @@ int FFmpegDecoder::save_frame_as_jpeg(AVFrame *pframe)
 
 	AVCodec* pCodec = avcodec_find_encoder(pCodecCtx->codec_id);
 	if (!pCodec) {
-		printf("Codec not found.");
+		//printf("Codec not found.");
+		fEnviron << "Codec not found.";
 		return -1;
 	}
 	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
-		printf("Could not open codec.");
+		//printf("Could not open codec.");
+		fEnviron << "Could not open codec.";
 		return -1;
 	}
 
@@ -299,7 +300,8 @@ int FFmpegDecoder::save_frame_as_jpeg(AVFrame *pframe)
 	int got_picture = 0;
 	int ret = avcodec_encode_video2(pCodecCtx, &pkt, pframe, &got_picture);
 	if (ret < 0) {
-		printf("Encode Error.\n");
+		//printf("Encode Error.\n");
+		fEnviron << "Encode Error.";
 		return -1;
 	}
 	if (got_picture == 1) {
@@ -312,7 +314,8 @@ int FFmpegDecoder::save_frame_as_jpeg(AVFrame *pframe)
 	//Write Trailer
 	av_write_trailer(pFormatCtx);
 
-	printf("Encode Successful.\n");
+	//printf("Encode Successful.\n");
+	fEnviron << "Image Frame Encode Successful.";
 
 	if (pAVStream) {
 		avcodec_close(pAVStream->codec);

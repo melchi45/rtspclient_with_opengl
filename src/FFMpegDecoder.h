@@ -15,7 +15,9 @@ extern "C" {
 //#pragma comment(lib, "avcodec.lib")
 //#pragma comment(lib, "avformat.lib")
 //#pragma comment(lib, "swscale.lib")
+
 class RTSPClient;
+class UsageEnvironment;
 class CDecodeCB
 {
 public:
@@ -25,7 +27,7 @@ public:
 class FFmpegDecoder
 {
 public:
-	FFmpegDecoder();
+	FFmpegDecoder(UsageEnvironment& env);
 	~FFmpegDecoder();
 	int initFFMPEG();
 	int openDecoder(int width, int height, CDecodeCB* pCB);
@@ -49,5 +51,6 @@ private:
 	int m_nWidth;
 	int m_nHeight;
 	RTSPClient* pClient;
+	UsageEnvironment& fEnviron;
 };
 #endif // _FFMPEG_DECODER_H_
