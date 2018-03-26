@@ -15,6 +15,7 @@ public:
 	static void *run(void *param);
 //	int openDecoder(int width, int height, CDecodeCB* pCB);
 //	int encode(uint8_t* input, int nLen, bool bWaitIFrame = false);
+	void WriteFrame(uint8_t * RGBFrame);
 
 private:
 	pthread_t thread_id;
