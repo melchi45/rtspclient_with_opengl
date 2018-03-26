@@ -17,6 +17,9 @@
 #define TEX_ID			0
 
 char const* clientProtocolName = "RTSP";
+int windows_width;
+int windows_height;
+
 
 // RTSP 'response handlers':
 void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultString);
@@ -60,6 +63,7 @@ MediaRTSPSession::MediaRTSPSession()
 	, m_password("")
 	, m_progName("")
 	, m_rtspUrl("")
+	, screen_radio(HD)
 	, m_debugLevel(0)
 #if defined(USE_GLFW_LIB)
 	, window(NULL)
@@ -71,6 +75,54 @@ MediaRTSPSession::MediaRTSPSession()
 {
 	m_running = false;
 	eventLoopWatchVariable = 0;
+
+	switch (screen_radio)
+	{
+	case nHD:
+		windows_width = 640;
+		windows_height = 320;
+		break;
+	case qHD:
+		windows_width = 960;
+		windows_height = 540;
+		break;
+	case HD:
+		windows_width = 1280;
+		windows_height = 720;
+		break;
+	case HD_PLUS:
+		windows_width = 1600;
+		windows_height = 900;
+		break;
+	case FHD:
+		windows_width = 1920;
+		windows_height = 1080;
+		break;
+	case WQHD:
+		windows_width = 2560;
+		windows_height = 1440;
+		break;
+	case QHD_PLUS:
+		windows_width = 3200;
+		windows_height = 1800;
+		break;
+	case UHD_4K:
+		windows_width = 3840;
+		windows_height = 2160;
+		break;
+	case UHD_5K_PLUS:
+		windows_width = 5120;
+		windows_height = 2880;
+		break;
+	case UHD_8K:
+		windows_width = 7680;
+		windows_height = 4320;
+		break;
+	default:
+		windows_width = 640;
+		windows_height = 320;
+		break;
+	}
 }
 
 MediaRTSPSession::~MediaRTSPSession()
@@ -210,6 +262,9 @@ static void cursor_callback(GLFWwindow* win, double x, double y) { }
 
 static void char_callback(GLFWwindow* win, unsigned int key) { }
 
+
+#define TRIANGLE_ROTATE 0
+#define USE_DUMMY_DATA	1
 void MediaRTSPSession::glfw3_fun()
 {
 	// reference
@@ -250,21 +305,23 @@ void MediaRTSPSession::glfw3_fun()
 	glfwSetMouseButtonCallback(window, button_callback);
 	glfwMakeContextCurrent(window);
 
+	bool _firstrendering = true;
+
 	while (!glfwWindowShouldClose(window))
 	{
 		float ratio;
 		int width, height;
 		glfwGetFramebufferSize(window, &width, &height);
 		ratio = width / (float)height;
-//		glViewport(0, 0, width, height);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-/*		glMatrixMode(GL_PROJECTION);
+		glViewport(0, 0, width, height);
+		glClear(GL_COLOR_BUFFER_BIT);
+/*
+		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		glOrtho(-ratio, ratio, -1.f, 1.f, 1.f, -1.f);
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-	*/	
-		glGenTextures(1, &camera_texture);
+		*/
 		/*
 		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 		glPixelStorei(GL_UNPACK_LSB_FIRST, GL_TRUE);
@@ -273,8 +330,9 @@ void MediaRTSPSession::glfw3_fun()
 		glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		*/
-		std::cout << "vector size: " << myvector.size() << std::endl;
 
+#pragma message ("rgb to 2d texture")
+		std::cout << "vector size: " << myvector.size() << std::endl;
 		if (myvector.size() > 10) {
 			std::vector<rgb_buffer>::iterator it = myvector.begin();
 			rgb_buffer buffer = *it;
@@ -282,24 +340,82 @@ void MediaRTSPSession::glfw3_fun()
 			height = buffer.height;
 
 			if (buffer.data != NULL) {
+#pragma message ("triangle rotate example")
+#if TRIANGLE_ROTATE
+				glRotatef((float)glfwGetTime() * 50.f, 0.f, 0.f, 1.f);
+				glBegin(GL_TRIANGLES);
+				glColor3f(1.f, 0.f, 0.f);
+				glVertex3f(-0.6f, -0.4f, 0.f);
+				glColor3f(0.f, 1.f, 0.f);
+				glVertex3f(0.6f, -0.4f, 0.f);
+				glColor3f(0.f, 0.f, 1.f);
+				glVertex3f(0.f, 0.6f, 0.f);
+				glEnd();
+#else
+
+#if USE_DUMMY_DATA
+				unsigned char* data = new unsigned char[width * height * 4];
+				for (int y = 0; y < height; ++y)
+					for (int x = 0; x < width; ++x)
+						if ((x - 100)*(x - 100) + (y - 156)*(y - 156) < 75 * 75) {
+							data[(256 * y + x) * 4 + 0] = 156;
+							data[(256 * y + x) * 4 + 1] = 256;
+							data[(256 * y + x) * 4 + 2] = 156;
+							data[(256 * y + x) * 4 + 3] = 200;
+						}
+						else {
+							data[(256 * y + x) * 4 + 0] = 0;
+							data[(256 * y + x) * 4 + 1] = 0;
+							data[(256 * y + x) * 4 + 2] = 0;
+							data[(256 * y + x) * 4 + 3] = 0;
+						}
+#endif
+						if (_firstrendering) {
+							glBindTexture(GL_TEXTURE_2D, camera_texture);
+#if USE_DUMMY_DATA
+							glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+#elif USE_REAL_DATA
+							glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, buffer.width, buffer.height, 0, GL_RGB, GL_UNSIGNED_BYTE, buffer.data);
+#endif
+
+							_firstrendering = false;
+						}
+						else {
+							glActiveTexture(camera_texture);
+							glBindTexture(GL_TEXTURE_2D, camera_texture);
+#if USE_DUMMY_DATA
+							glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+#elif USE_REAL_DATA
+							glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_BGR, GL_UNSIGNED_BYTE, (GLvoid*)buffer.data);
+#endif
+						}
+
 				// Attach a name to the texture for later use
 				//glBindTexture(GL_TEXTURE_2D, TEX_ID);
-				glBindTexture(GL_TEXTURE_2D, camera_texture);
+				//glBindTexture(GL_TEXTURE_2D, camera_texture);
 				// Define how pixels are packed in arrays
 				//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);  //Always set the base and max mipmap levels of a texture.
+				//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+
 				//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, buffer.width, buffer.height, 0, GL_RGB, GL_UNSIGNED_BYTE, buffer.data);
 				//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_RGB, GL_UNSIGNED_BYTE, buffer.data);
-				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_BGR, GL_UNSIGNED_BYTE, buffer.data);
-			
+				//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_BGR, GL_UNSIGNED_BYTE, (GLvoid*)buffer.data);
+				//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, buffer.width, buffer.height, GL_BGR, GL_UNSIGNED_BYTE, (GLvoid*)data);
+				//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, buffer.width, buffer.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data);
+#if USE_DUMMY_DATA
+				delete data;
+#endif
+#endif // TRIANGLE_ROTATE
 				free(buffer.data);
 			}
 
 			myvector.erase(it);
 		}
-		
+#pragma message ("texture draw example")
 /*		//glColor3f(1, 1, 1);
 		glBindTexture(GL_TEXTURE_2D, camera_texture);
 		glBegin(GL_QUADS);
@@ -316,18 +432,7 @@ void MediaRTSPSession::glfw3_fun()
 		glVertex3f(0, height, 0);
 
 		glEnd();*/
-		
-		
-		glRotatef((float)glfwGetTime() * 50.f, 0.f, 0.f, 1.f);
-		glBegin(GL_TRIANGLES);
-		glColor3f(1.f, 0.f, 0.f);
-		glVertex3f(-0.6f, -0.4f, 0.f);
-		glColor3f(0.f, 1.f, 0.f);
-		glVertex3f(0.6f, -0.4f, 0.f);
-		glColor3f(0.f, 0.f, 1.f);
-		glVertex3f(0.f, 0.6f, 0.f);
-		glEnd();
-		
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -348,7 +453,7 @@ void MediaRTSPSession::sdl2_fun()
 
 	// create the window and renderer
 	// note that the renderer is accelerated
-	window = SDL_CreateWindow("Image Loading", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOWS_WIDTH, WINDOWS_HEIGHT, SDL_WINDOW_RESIZABLE);
+	window = SDL_CreateWindow("Image Loading", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windows_width, windows_height, SDL_WINDOW_RESIZABLE);
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
 	// main loop
@@ -378,7 +483,7 @@ void MediaRTSPSession::sdl2_fun()
 			if (buffer.data != NULL) {
 				//SDL_Rect texr; texr.x = WINDOWS_WIDTH / 2; texr.y = WINDOWS_HEIGHT / 2; texr.w = width * 2; texr.h = height * 2;
 				SDL_Rect texure_rect; texure_rect.x = 0; texure_rect.y = 0; texure_rect.w = buffer.width; texure_rect.h = buffer.height;
-				SDL_Rect windows_rect; windows_rect.x = 0; windows_rect.y = 0; windows_rect.w = WINDOWS_WIDTH; windows_rect.h = WINDOWS_HEIGHT;
+				SDL_Rect windows_rect; windows_rect.x = 0; windows_rect.y = 0; windows_rect.w = windows_width; windows_rect.h = windows_height;
 
 				texture = SDL_CreateTexture(
 					renderer,
@@ -438,7 +543,7 @@ int MediaRTSPSession::openURL(UsageEnvironment& env)
 	}
 	return 0;
 }
-
+#if 0
 void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, int pitch, RTSPClient* client)
 {
 	if (client != NULL) {
@@ -471,6 +576,25 @@ void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, in
 		}
 	}
 }
+#else
+void MediaRTSPSession::onFrame(uint8_t* buff, int len, int width, int height, int pitch)
+{
+	// copy to buffer vector
+	if (buff != NULL) {
+		rgb_buffer buffer;
+		buffer.width = width;
+		buffer.height = height;
+		buffer.pitch = pitch;
+		buffer.length = len;
+		//buffer.data = buff;
+		uint8_t* image_data = (uint8_t *)malloc(len * sizeof(uint8_t));
+		memset(image_data, 0x00, len * sizeof(uint8_t));
+		memcpy(image_data, buff, len * sizeof(uint8_t));
+		buffer.data = image_data;
+		myvector.push_back(buffer);
+	}
+}
+#endif
 
 // Implementation of the RTSP 'response handlers':
 void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultString) {
@@ -1055,12 +1179,22 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 							<< "\" subsession: " << env.getResultMsg() << "\n";
 						break;
 					}
+#if 0
 					FFmpegDecoder* decoder = ((MediaH264MediaSink*)scs.subsession->sink)->getDecoder(); // alias
 					if (decoder == NULL) {
 						env << "Failed to get a video decoder\n";
 						break;
 					}
 					decoder->openDecoder(1920, 1080, ((MediaRTSPClient*)rtspClient)->getRTSPSession());
+#else
+					H264Decoder* decoder = ((MediaH264MediaSink*)scs.subsession->sink)->getDecoder(); // alias
+					if (decoder == NULL) {
+						env << "Failed to get a video decoder\n";
+						break;
+					}
+					decoder->setListener(((MediaRTSPClient*)rtspClient)->getRTSPSession());
+					decoder->setRescaleSize(windows_width, windows_height); //set decode size
+#endif
 
 //					scs.subsession->videoWidth();
 //					scs.subsession->videoHeight();

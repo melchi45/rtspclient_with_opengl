@@ -4,17 +4,24 @@
 // reference from 
 // http://blog.chinaunix.net/uid-15063109-id-4482932.html
 
+#include <functional>	// for std::function
+
 extern "C" {
+	// disable warnings about badly formed documentation from ffmpeg, which don't need at all
+#pragma warning(disable:4635)
+	// disable warning about conversion int64 to int32
+#pragma warning(disable:4244)
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libavutil/avutil.h>
+#include <libavdevice/avdevice.h>
 #include <libswscale/swscale.h>
-}
 
-//#pragma comment(lib, "avutil.lib")
-//#pragma comment(lib, "avcodec.lib")
-//#pragma comment(lib, "avformat.lib")
-//#pragma comment(lib, "swscale.lib")
+#pragma comment(lib, "avutil.lib")
+#pragma comment(lib, "avcodec.lib")
+#pragma comment(lib, "avformat.lib")
+#pragma comment(lib, "swscale.lib")
+}
 
 class RTSPClient;
 class UsageEnvironment;
@@ -29,10 +36,12 @@ class FFmpegDecoder
 public:
 	FFmpegDecoder(UsageEnvironment& env);
 	~FFmpegDecoder();
-	int initFFMPEG();
+	
+	int intialize();
+	int finalize();
+
 	int openDecoder(int width, int height, CDecodeCB* pCB);
 	void setClient(RTSPClient* client);
-	int closeDecoder();
 	int decode_rtsp_frame(uint8_t* input, int nLen, bool bWaitIFrame = false);
 
 private:

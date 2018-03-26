@@ -4,7 +4,11 @@
 
 #include "liveMedia.hh"
 
+#if 0
 class FFmpegDecoder;
+#else
+class H264Decoder;
+#endif
 // Define a data sink (a subclass of "MediaSink") to receive the data for each subsession (i.e., each audio or video 'substream').
 // In practice, this might be a class (or a chain of classes) that decodes and then renders the incoming audio or video.
 // Or it might be a "FileSink", for outputting the received data into a file (as is done by the "openRTSP" application).
@@ -15,7 +19,11 @@ public:
 		RTSPClient* client,
 		MediaSubsession& subsession, // identifies the kind of data that's being received
 		char const* streamId = NULL); // identifies the stream itself (optional)
+#if 0
 	FFmpegDecoder* getDecoder() { return video_decoder; }
+#else
+	H264Decoder* getDecoder() { return video_decoder; }
+#endif
 	long getFrameCount() { return m_nFrameCount; }
 
 private:
@@ -42,7 +50,11 @@ private:
 	char* fStreamId;
 	unsigned m_nFrameSize;
 	unsigned m_nNalHeaderStartCodeOffset;
+#if 0
 	FFmpegDecoder* video_decoder;
+#else
+	H264Decoder* video_decoder;
+#endif
 	long m_nFrameCount;
 	RTSPClient* pClient;
 };

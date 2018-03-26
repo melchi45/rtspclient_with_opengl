@@ -36,13 +36,13 @@ FFmpegDecoder::~FFmpegDecoder()
 }
 
 
-int FFmpegDecoder::initFFMPEG()
+int FFmpegDecoder::intialize()
 {
-	//m_state = RC_STATE_INIT;
-	avcodec_register_all();
+	// Intialize FFmpeg enviroment
 	av_register_all();
-	//avformat_network_init();
-
+	avdevice_register_all();
+	avcodec_register_all();
+	avformat_network_init();
 
 	//if (av_lockmgr_register(lockmgr))
 	{
@@ -104,7 +104,7 @@ int FFmpegDecoder::openDecoder(int width, int height, CDecodeCB* pCB)
 	return 0;
 }
 
-int FFmpegDecoder::closeDecoder()
+int FFmpegDecoder::finalize()
 {
 	if (decoder_context)
 	{

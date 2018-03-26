@@ -5,10 +5,29 @@
 #include <pthread.h>
 #include <vector>		// for std::vector
 
+#if 0
 #include "FFMpegDecoder.h"
+#else
+#include "H264Decoder.h"
+#endif
 
-#define WINDOWS_WIDTH	640
-#define WINDOWS_HEIGHT	360
+// reference
+// https://en.wikipedia.org/wiki/Graphics_display_resolution
+typedef enum screen_ratio {
+	nHD,
+	qHD,
+	HD,
+	HD_PLUS,
+	FHD,
+	WQHD,
+	QHD_PLUS,
+	UHD_4K,
+	UHD_5K_PLUS,
+	UHD_8K
+} SCREEN_RATIO;
+
+//#define WINDOWS_WIDTH	320
+//#define WINDOWS_HEIGHT	160
 
 #if defined(USE_GLFW_LIB)
 // reference
@@ -27,7 +46,11 @@
 class TaskScheduler;
 class UsageEnvironment;
 class RTSPClient;
+#if 0
 class MediaRTSPSession : public CDecodeCB
+#else
+class MediaRTSPSession : public DecodeListener
+#endif
 {
 public:
 	MediaRTSPSession();
@@ -64,6 +87,8 @@ private:
 	int m_debugLevel;
 	int m_port;
 
+	SCREEN_RATIO screen_radio;
+
 	typedef struct buffer {
 		int width;
 		int height;
@@ -96,7 +121,11 @@ private:
 	void sdl2_fun();
 #endif
 protected:
+#if 0
 	virtual void videoCB(int width, int height, uint8_t* buff, int len, int pitch, RTSPClient* client);
+#else
+	virtual void onFrame(uint8_t* buff, int length, int width, int height, int pitch);
+#endif
 };
 
 #endif // _MEDIA_RTSP_SESSION_H_

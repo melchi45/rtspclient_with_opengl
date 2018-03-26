@@ -1,5 +1,9 @@
 ﻿#include "MediaH264MediaSink.h"
+#if 0
 #include "FFMpegDecoder.h"
+#else
+#include "H264Decoder.h"
+#endif
 #include "h264_stream.h"
 
 //#define ENABLE_NAL_PARSER					1
@@ -58,20 +62,35 @@ MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, RTSPClient* client
   fReceiveBuffer = new u_int8_t[DUMMY_SINK_RECEIVE_BUFFER_SIZE];
   memset(fReceiveBuffer, 0, DUMMY_SINK_RECEIVE_BUFFER_SIZE);
 #endif
-
+#if 0
   video_decoder = new FFmpegDecoder(env);
+#else
+  video_decoder = new H264Decoder();
+#endif
   if (video_decoder == NULL)
   {
 	  env << "Failed to create a FFMpeg Decoder\n";
   }
+#if 0
+ if (video_decoder != NULL) {
+	  video_decoder->intialize();
 
-  if (video_decoder != NULL) {
-	  video_decoder->initFFMPEG();
 	  if (pClient != NULL) {
 		  video_decoder->setClient(pClient);
 	  }
 	  //decoder->openDecoder(scs.subsession->videoWidth(), scs.subsession->videoHeight(), ((MediaRTSPClient*)rtspClient)->getRTSPSession());
   }
+#else
+  if (video_decoder != NULL) {
+	  //video_decoder->setSize(320, 240); //set decode size
+	  //video_decoder->setSize(640, 480); //set decode size
+	  //video_decoder->setSize(1080, 720); //set decode size
+	  //video_decoder->setSize(1080, 720); //set decode size
+	  //video_decoder->setSize(1920, 1080); //set decode size
+	 // video_decoder->setSize(3840, 2160); //set decode size
+  }
+#endif
+
 }
 
 MediaH264MediaSink::~MediaH264MediaSink() {
@@ -79,7 +98,7 @@ MediaH264MediaSink::~MediaH264MediaSink() {
   delete[] fStreamId;
 
   if (video_decoder != NULL) {
-	  video_decoder->closeDecoder();
+	  video_decoder->finalize();
 	  delete video_decoder;
   }
   video_decoder = NULL;
@@ -310,7 +329,11 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
 
 	  envir() << "Incomplete Data.......................    \n";
   }
+#if 0
   video_decoder->decode_rtsp_frame(fReceiveBuffer, frameSize + start_code_length);
+#else
+  video_decoder->decode(fReceiveBuffer, frameSize + start_code_length);
+#endif
 
 #ifdef ENABLE_NAL_PARSER
   h264_free(h);
