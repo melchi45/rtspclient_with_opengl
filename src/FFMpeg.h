@@ -5,6 +5,8 @@
 // http://blog.chinaunix.net/uid-15063109-id-4482932.html
 
 #include <functional>	// for std::function
+#include <queue>
+#include <pthread.h>
 
 extern "C" {
 	// disable warnings about badly formed documentation from ffmpeg, which don't need at all
@@ -20,6 +22,7 @@ extern "C" {
 #pragma comment(lib, "avutil.lib")
 #pragma comment(lib, "avcodec.lib")
 #pragma comment(lib, "avformat.lib")
+#pragma comment(lib, "avdevice.lib")
 #pragma comment(lib, "swscale.lib")
 }
 
@@ -38,10 +41,11 @@ extern "C" {
 #define AV_PIX_FMT_YUV420P PIX_FMT_YUV420P
 #endif
 
+class Frame;
 class DecodeListener
 {
 public:
-	virtual void onFrame(uint8_t* buff, int length, int width, int height, int pitch) = 0;
+	virtual void onFrame(void* frame) = 0;
 };
 
 class FFMpeg
@@ -53,7 +57,9 @@ public:
 	virtual int intialize();
 	virtual int finalize();
 
-	void setOnframeCallbackFunction(std::function<void(uint8_t *, int, int, int, int)> func);
+	//virtual int decode(uint8_t* input, int nLen, bool bWaitIFrame = false) = 0;
+
+	void setOnframeCallbackFunction(std::function<void(void*)> func);
 
 	void setListener(DecodeListener* listener) { m_plistener = listener; }
 	//void setAVCodec(AVCodecID codec) { codec_id = codec; }
@@ -65,7 +71,7 @@ public:
 //	void setAVFrame(AVFrame* frame) { pFrame = frame; }
 //	AVFrame* getAVFrame() { return pFrame; }
 
-	void increase_frame_count() { frame_count++; }
+//	void increase_frame_count() { frame_count++; }
 
 	void setDstWidth(int width) { dstWidth = width; }
 	void setDstHeight(int height) { dstHeight = height; }
@@ -76,26 +82,36 @@ public:
 	void setSWSType(int type) { sws_flags = type; }
 	int getSWSType() { return sws_flags; }
 
+	Frame* PopFrame();
+//	Frame* PushFrame();
+
 protected:
 	int save_frame_as_jpeg(AVFrame *pframe);
 	int save_frame_as_ppm(AVFrame *pframe);
 
 protected:
 	bool m_bInit;
-	AVFormatContext *pFormatCtx;
 	AVCodecContext *pCodecCtx;
+	AVFormatContext *pFormatCtx;
 	struct SwsContext *img_convert_ctx; 
 	AVCodecID	codec_id;
 	AVFrame *pFrame;
+	AVCodec * pCodec;
 
 	DecodeListener* m_plistener;
-	std::function<void(uint8_t *, int, int, int, int)> onFrame;
+	std::function<void(void*)> onFrame;
 
 	int srcWidth, dstWidth;
 	int srcHeight, dstHeight;
 
+	int frame_count;
+
+	std::queue<uint8_t*> inqueue;
+	pthread_mutex_t inqueue_mutex;
+	std::queue<Frame *> outqueue;
+	pthread_mutex_t outqueue_mutex;
+
 private:
 	int sws_flags;
-	int frame_count;	
 };
 #endif // _FFMPEG_H_

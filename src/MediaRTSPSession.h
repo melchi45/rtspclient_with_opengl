@@ -88,7 +88,7 @@ private:
 	int m_port;
 
 	SCREEN_RATIO screen_radio;
-
+	
 	typedef struct buffer {
 		int width;
 		int height;
@@ -124,7 +124,7 @@ protected:
 #if 0
 	virtual void videoCB(int width, int height, uint8_t* buff, int len, int pitch, RTSPClient* client);
 #else
-	virtual void onFrame(uint8_t* buff, int length, int width, int height, int pitch);
+	virtual void onFrame(void* frame);
 #endif
 };
 

@@ -1,4 +1,5 @@
 #include "H264Decoder.h"
+#include "Frame.h"
 
 H264Decoder::H264Decoder()
 	: FFMpeg()
@@ -20,15 +21,15 @@ int H264Decoder::intialize()
 	FFMpeg::intialize();
 
 	// DECODER SETUP
-	pAVCodec = avcodec_find_decoder(codec_id);
-	if (!pAVCodec)
+	pCodec = avcodec_find_decoder(codec_id);
+	if (!pCodec)
 	{
 		//log_error("codec not found");
 		//fEnviron << "codec not found";
 		return -2;
 	}
 
-	pCodecCtx = avcodec_alloc_context3(pAVCodec);
+	pCodecCtx = avcodec_alloc_context3(pCodec);
 	if (!pCodecCtx)
 	{
 		//log_error("codec context not found");
@@ -36,7 +37,7 @@ int H264Decoder::intialize()
 		return -3;
 	}
 
-	if (avcodec_open2(pCodecCtx, pAVCodec, NULL) < 0)
+	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
 	{
 		//log_error("could not open codec");
 		//fEnviron << "could not open codec";
@@ -86,8 +87,6 @@ int H264Decoder::decode(uint8_t* input, int nLen, bool bWaitIFrame /*= false*/)
 
 			if (got_picture)
 			{
-				// increase frame count
-				increase_frame_count();
 				// set image size
 				srcWidth = pCodecCtx->width;
 				srcHeight = pCodecCtx->height;
@@ -127,11 +126,23 @@ int H264Decoder::decode(uint8_t* input, int nLen, bool bWaitIFrame /*= false*/)
 #elif defined(SAVE_AVFRAME_TO_JPEG)
 				save_frame_as_jpeg(decoder_picture);
 #endif
-				int pitch = pFrameRGB->linesize[0];
+				Frame* frame = new Frame();
+				// memory initialize
+				frame->dataPointer = new uint8_t[numBytes * sizeof(uint8_t)];
+				memset(frame->dataPointer, 0x00, numBytes * sizeof(uint8_t));
+				// image copy
+				memcpy(frame->dataPointer, pFrameRGB->data[0], numBytes * sizeof(uint8_t));
+				// set image data
+				frame->dataSize = numBytes * sizeof(uint8_t);
+				frame->frameID = frame_count++;
+				frame->width = dstWidth;
+				frame->height = dstHeight;
+				frame->pitch = pFrameRGB->linesize[0];
+
 				if (m_plistener != NULL) {
-					m_plistener->onFrame(pFrameRGB->data[0], numBytes * sizeof(uint8_t), dstWidth, dstHeight, pitch);
+					m_plistener->onFrame(frame);
 				} else if (onFrame != NULL) {
-					onFrame(pFrameRGB->data[0], numBytes * sizeof(uint8_t), dstWidth, dstHeight, pitch);
+					onFrame(frame);
 				}
 
 				av_free(buffer);
@@ -143,6 +154,20 @@ int H264Decoder::decode(uint8_t* input, int nLen, bool bWaitIFrame /*= false*/)
 					avpkt.size -= len;
 					avpkt.data += len;
 				}
+/*
+				pthread_mutex_lock(&outqueue_mutex);
+
+				if (outqueue.size() < 30)
+				{
+					outqueue.push(frame);
+				}
+				else
+				{
+					delete frame;
+				}
+
+				pthread_mutex_unlock(&outqueue_mutex);
+*/
 			}
 			else
 			{

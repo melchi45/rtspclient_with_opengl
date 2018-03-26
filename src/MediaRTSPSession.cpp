@@ -8,6 +8,7 @@
 #include "MediaH264MediaSink.h"
 #include "liveMedia.hh"
 #include "log_utils.h"
+#include "Frame.h"
 
 #include <iostream>		// for std::cout, std::endl
 #include <map>
@@ -577,19 +578,21 @@ void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, in
 	}
 }
 #else
-void MediaRTSPSession::onFrame(uint8_t* buff, int len, int width, int height, int pitch)
+void MediaRTSPSession::onFrame(void* frame)
 {
 	// copy to buffer vector
-	if (buff != NULL) {
+	if (frame != NULL) {
+		((Frame*)frame);
+
 		rgb_buffer buffer;
-		buffer.width = width;
-		buffer.height = height;
-		buffer.pitch = pitch;
-		buffer.length = len;
+		buffer.width = ((Frame*)frame)->width;
+		buffer.height = ((Frame*)frame)->height;
+		buffer.pitch = ((Frame*)frame)->pitch;
+		buffer.length = ((Frame*)frame)->dataSize;
 		//buffer.data = buff;
-		uint8_t* image_data = (uint8_t *)malloc(len * sizeof(uint8_t));
-		memset(image_data, 0x00, len * sizeof(uint8_t));
-		memcpy(image_data, buff, len * sizeof(uint8_t));
+		uint8_t* image_data = (uint8_t *)malloc(((Frame*)frame)->dataSize);
+		memset(image_data, 0x00, ((Frame*)frame)->dataSize);
+		memcpy(image_data, ((Frame*)frame)->dataPointer, ((Frame*)frame)->dataSize);
 		buffer.data = image_data;
 		myvector.push_back(buffer);
 	}

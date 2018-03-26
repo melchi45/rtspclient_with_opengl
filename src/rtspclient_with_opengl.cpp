@@ -9,6 +9,7 @@
 
 #include "MediaRTSPSession.h"
 #include "log_utils.h"
+#include "H264ReadCameraEncoder.h"
 
 //char eventLoopWatchVariable = 0;
 char* username = NULL;
@@ -30,6 +31,7 @@ void usage(char const* progName) {
 int main(int argc, char** argv) {
 	pRtsp = new MediaRTSPSession();
 	bool option_param = false;
+	bool isServer = false;
 	// We need at least one "rtsp://" URL argument:
 	if (argc < 2) {
 		usage(argv[0]);
@@ -76,6 +78,9 @@ int main(int argc, char** argv) {
 			bInterleaved = true;
 			option_param = true;
 			break;
+		case 's':
+			isServer = true;
+			break;
 		default:
 			break;
 		}
@@ -88,15 +93,21 @@ int main(int argc, char** argv) {
 	signal(SIGINT, _signalHandlerShutdown);
 	signal(SIGSEGV, _signalHandlerShutdown);
 
-	pRtsp->setDebugLevel(1);
-	if (pRtsp->startRTSPClient("MyClient", rtsp_url, username, password, bInterleaved, bUpStream))
-	{
-		delete pRtsp;
-		pRtsp = NULL;
+	if (!isServer) {
+		pRtsp->setDebugLevel(1);
+		if (pRtsp->startRTSPClient("MyClient", rtsp_url, username, password, bInterleaved, bUpStream))
+		{
+			delete pRtsp;
+			pRtsp = NULL;
 
-		return -1;
+			return -1;
+		}
+
 	}
+	else {
+		H264ReadCameraEncoder enc;
 
+	}
 	while (true) {
 #ifdef WIN32
 		Sleep(5000);         // wait for 5 secondes before closing

@@ -13,9 +13,6 @@ public:
 	virtual int finalize();
 
 //	int openDecoder(int width, int height, CDecodeCB* pCB);
-	int decode(uint8_t* input, int nLen, bool bWaitIFrame = false);
-
-protected:
-	AVCodec * pAVCodec;
+	virtual int decode(uint8_t* input, int nLen, bool bWaitIFrame = false);
 };
 #endif // _H264DECODER_H_
