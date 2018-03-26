@@ -9,7 +9,8 @@
 
 #include "MediaRTSPSession.h"
 #include "log_utils.h"
-#include "H264ReadCameraEncoder.h"
+//#include "H264ReadCameraEncoder.h"
+#include "H264ReadScreenEncoder.h"
 
 //char eventLoopWatchVariable = 0;
 char* username = NULL;
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
 
 	}
 	else {
-		H264ReadCameraEncoder enc;
+		H264ReadScreenEncoder enc;
 
 	}
 	while (true) {
