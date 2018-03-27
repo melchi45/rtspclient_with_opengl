@@ -404,4 +404,6 @@ int H264ReadScreenEncoder::WriteFrame(AVFrame *frame)
 
 	av_free(buffer);
 #endif
+
+	//https://stackoverflow.com/questions/2940671/how-does-one-encode-a-series-of-images-into-h264-using-the-x264-c-api
 }
