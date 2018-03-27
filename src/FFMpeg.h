@@ -87,6 +87,7 @@ public:
 
 protected:
 	int save_frame_as_jpeg(AVFrame *pframe);
+	int save_frame_as_png(AVFrame *pframe);
 	int save_frame_as_ppm(AVFrame *pframe);
 
 protected:

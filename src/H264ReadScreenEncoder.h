@@ -15,18 +15,20 @@ public:
 	static void *run(void *param);
 //	int openDecoder(int width, int height, CDecodeCB* pCB);
 //	int encode(uint8_t* input, int nLen, bool bWaitIFrame = false);
-	void WriteFrame(uint8_t * RGBFrame);
 
 private:
 	pthread_t thread_id;
 	int thread_exit;
 	int videoindex;
 
-	void WriteFrame(uint8_t * RGBFrame);
-	int ReadFrame_from_Camera();
+	int WriteFrame(AVFrame * frame);
+	int ReadFrame_from_Screenshot();
 
 protected:
 	AVCodec * pAVCodec;
-	AVFrame	* pFrameYUV;
+	AVFormatContext* pScreenFormatCtx;
+	AVCodecContext* pScreenCodecCtx;
+//	AVStream *pStream;
+//	AVFrame	* pFrameYUV;
 };
 #endif // _H264_READ_CAMERA_ENCODER_H_
