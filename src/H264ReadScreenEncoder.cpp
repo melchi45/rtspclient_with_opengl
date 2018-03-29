@@ -52,20 +52,29 @@ int H264ReadScreenEncoder::intialize()
 	pCodecCtx->width = dstWidth;
 	pCodecCtx->height = dstHeight;
 	/* frames per second */
-	AVRational rational;
-	rational.num = 1;
-	rational.den = fps;
-	pCodecCtx->time_base = rational;
-	pCodecCtx->gop_size = 10; /* emit one intra frame every ten frames */
-	pCodecCtx->max_b_frames = 1;
+	AVRational timebase;
+	timebase.num = 1;
+	timebase.den = fps;
+	pCodecCtx->time_base = timebase;
+
+	AVRational framerate;
+	framerate.num;
+	framerate.den = fps;
+
+	pCodecCtx->framerate = framerate;
+
+	pCodecCtx->gop_size = 12; /* emit one intra frame every ten frames */
+	pCodecCtx->max_b_frames = 2;
 	pCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
-	if (codec_id == AV_CODEC_ID_H264)
-		av_opt_set(pCodecCtx->priv_data, "preset", "slow", 0);
+	if (codec_id == AV_CODEC_ID_H264) {
+		//av_opt_set(pCodecCtx->priv_data, "preset", "slow", 0);
+		av_opt_set(pCodecCtx->priv_data, "profile", "baseline", 0);
+	}
 
 	/* open it */
 	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
-		fprintf(stderr, "Could not open codec\n");
+		fprintf(stderr, "avcodec_open failed for h.264 encode\n");
 		exit(1);
 	}
 
@@ -299,7 +308,10 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 /// </summary>
 /// <param name="frame">yuv frame pointer</param>
 /// <returns>error number</returns>
-/// <reference>https://stackoverflow.com/questions/2940671/how-does-one-encode-a-series-of-images-into-h264-using-the-x264-c-api</reference>
+/// <reference>
+/// https://stackoverflow.com/questions/2940671/how-does-one-encode-a-series-of-images-into-h264-using-the-x264-c-api
+/// https://stackoverflow.com/questions/28727772/ffmpeg-c-api-h-264-encoding-mpeg2-ts-streaming-problems
+/// </reference>
 int H264ReadScreenEncoder::WriteFrame(AVFrame* frame)
 {
 	AVPacket avpkt;
@@ -338,6 +350,8 @@ int H264ReadScreenEncoder::WriteFrame(AVFrame* frame)
 		data->dataPointer = new uint8_t[avpkt.size];
 		data->dataSize = avpkt.size - 4;
 		data->frameID = frame_count;
+		data->width = dstWidth;
+		data->height = dstHeight;
 
 		memcpy(data->dataPointer, avpkt.data + 4, avpkt.size - 4);
 
@@ -345,11 +359,12 @@ int H264ReadScreenEncoder::WriteFrame(AVFrame* frame)
 
 		if (outqueue.size()<30)
 		{
+			printf("complete add frame: %d", outqueue.size());
 			outqueue.push(data);
 		}
 		else
 		{
-			delete frame;
+			delete data;
 		}
 
 		pthread_mutex_unlock(&outqueue_mutex);
