@@ -1,12 +1,16 @@
 #include "H264ReadScreenEncoder.h"
+#include "Frame.h"
 
-//#define USE_YUV_FRAME 1
-#define USE_RGB_FRAME 1
+#define USE_YUV_FRAME	1
+//#define USE_RGB_FRAME	1
+
+#define FPS				30
 
 H264ReadScreenEncoder::H264ReadScreenEncoder()
 	: FFMpeg()
 	, thread_exit(0)
 	, videoindex(-1)
+	, fps(30)
 {
 	codec_id = AV_CODEC_ID_H264;
 	dstWidth = 640;
@@ -24,6 +28,48 @@ int H264ReadScreenEncoder::intialize()
 {	
 	FFMpeg::intialize();
 
+	/// create codec context for encoder
+	/* find the h264 video encoder */
+	pCodec = avcodec_find_encoder(codec_id);
+	if (!pCodec) {
+		fprintf(stderr, "Codec not found\n");
+		exit(1);
+	}
+
+	pCodecCtx = avcodec_alloc_context3(pCodec);
+	if (!pCodecCtx) {
+		fprintf(stderr, "Could not allocate video codec context\n");
+		exit(1);
+	}
+
+	pCodecCtx->codec_id = AV_CODEC_ID_H264;
+	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
+	pCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
+
+	/* put sample parameters */
+	pCodecCtx->bit_rate = 400000;
+	/* resolution must be a multiple of two */
+	pCodecCtx->width = dstWidth;
+	pCodecCtx->height = dstHeight;
+	/* frames per second */
+	AVRational rational;
+	rational.num = 1;
+	rational.den = fps;
+	pCodecCtx->time_base = rational;
+	pCodecCtx->gop_size = 10; /* emit one intra frame every ten frames */
+	pCodecCtx->max_b_frames = 1;
+	pCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
+
+	if (codec_id == AV_CODEC_ID_H264)
+		av_opt_set(pCodecCtx->priv_data, "preset", "slow", 0);
+
+	/* open it */
+	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
+		fprintf(stderr, "Could not open codec\n");
+		exit(1);
+	}
+
+	/// create codec context for screen capture
 	pScreenFormatCtx = avformat_alloc_context();
 	if (pScreenFormatCtx == NULL) {
 //		throw AVException(ENOMEM, "can not alloc av context");
@@ -139,18 +185,6 @@ int H264ReadScreenEncoder::intialize()
 
 int H264ReadScreenEncoder::finalize()
 {
-/*	if (pFrameYUV) {
-		av_freep(&(pFrameYUV->data[0]));
-		av_frame_unref(pFrameYUV);
-		av_free(pFrameYUV);
-	}
-	*/
-	//Clean
-/*	if (pStream) {
-		avcodec_close(pStream->codec);
-		av_free(pStream);
-	}
-	*/
 	if (pScreenCodecCtx)
 	{
 		avcodec_close(pScreenCodecCtx);
@@ -182,18 +216,6 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 		AVPacket *packet = (AVPacket *)av_malloc(sizeof(AVPacket));
 		img_convert_ctx = sws_getContext(pScreenCodecCtx->width, pScreenCodecCtx->height, pScreenCodecCtx->pix_fmt, pScreenCodecCtx->width, pScreenCodecCtx->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
-/*		// set up YV12 pixel array (12 bits per pixel)
-		yPlaneSz = pScreenCodecCtx->width * pScreenCodecCtx->height;
-		uvPlaneSz = pScreenCodecCtx->width * pScreenCodecCtx->height / 4;
-		yPlane = (uint8_t*)malloc(yPlaneSz);
-		uPlane = (uint8_t*)malloc(uvPlaneSz);
-		vPlane = (uint8_t*)malloc(uvPlaneSz);
-		if (!yPlane || !uPlane || !vPlane) {
-			fprintf(stderr, "Could not allocate pixel buffers - exiting\n");
-			//exit(1);
-		}
-		uvPitch = pScreenCodecCtx->width / 2;
-*/
 		while (!thread_exit) {
 			// raed frame from screen capture device (gdigrab)
 			if (av_read_frame(pScreenFormatCtx, packet) >= 0) {
@@ -210,47 +232,6 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 						srcHeight = pScreenCodecCtx->height;
 						// calculate byte size from rgb image by width and height
 
-#ifdef USE_RGB_FRAME
-						int numBytes = avpicture_get_size(AV_PIX_FMT_RGB24, dstWidth, dstHeight);
-						uint8_t * buffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
-
-						// YUV to RGB Color
-						// reference
-						// https://gist.github.com/lkraider/832062
-
-#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 45, 101)
-						AVFrame *pFrameRGB = av_frame_alloc();
-#else
-						AVFrame *pFrameRGB = avcodec_alloc_frame();
-#endif
-						// initialize RGB frame
-						avpicture_fill((AVPicture *)pFrameRGB, buffer, AV_PIX_FMT_RGB24, dstWidth, dstHeight);
-
-						// get scaling context from context image size to destination image size
-						img_convert_ctx = sws_getCachedContext(img_convert_ctx,
-							pScreenCodecCtx->width, // width of source image
-							pScreenCodecCtx->height, // height of source image 
-							pScreenCodecCtx->pix_fmt,
-							dstWidth, // width of destination image
-							dstHeight, // height of destination image
-							AV_PIX_FMT_RGB24, getSWSType(), NULL, NULL, NULL);
-						if (img_convert_ctx == NULL)
-						{
-							//log_error("Cannot initialize the conversion context");
-							//fEnviron << "Cannot initialize the conversion context";
-							return -4;
-						}
-						// scaling
-						sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize,
-							0, pScreenCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
-
-						save_frame_as_ppm(pFrameRGB);
-
-						WriteFrame(pFrameRGB);
-
-						av_free(pFrameRGB);
-						av_free(buffer);
-#elif USE_YUV_FRAME
 						int numBytes = avpicture_get_size(AV_PIX_FMT_YUV420P, dstWidth, dstHeight);
 						uint8_t * buffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
 
@@ -259,6 +240,12 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 #else
 						AVFrame *pFrameYUV = avcodec_alloc_frame();
 #endif
+						// set H.264 context info to frame for encoder
+						pFrameYUV->format = pCodecCtx->pix_fmt;
+						pFrameYUV->width = pCodecCtx->width;
+						pFrameYUV->height = pCodecCtx->height;
+						pFrameYUV->pts = frame_count++;
+
 						avpicture_fill((AVPicture *)pFrameYUV, buffer, AV_PIX_FMT_YUV420P, dstWidth, dstHeight);
 
 						// get scaling context from context image size to destination image size
@@ -271,20 +258,22 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 							AV_PIX_FMT_YUV420P, getSWSType(), NULL, NULL, NULL);
 						if (img_convert_ctx == NULL)
 						{
-							//log_error("Cannot initialize the conversion context");
-							//fEnviron << "Cannot initialize the conversion context";
+							fprintf(stderr, "Cannot initialize the conversion context [%s:%d]\n", __FILE__, __LINE__);
 							return -4;
 						}
 						// scaling
 						sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize,
 							0, pScreenCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
 
-						WriteFrame(pFrameYUV);
+						save_frame_as_jpeg(pFrameYUV);
+
+						if (WriteFrame(pFrameYUV) < 0) {
+							fprintf(stderr, "Cannot encode frame [%s:%d]\n", __FILE__, __LINE__);
+							return -4;
+						}
 
 						av_free(pFrameYUV);
 						av_free(buffer);
-#endif
-
 					}
 					else
 					{
@@ -305,84 +294,37 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 	}
 }
 
-int H264ReadScreenEncoder::WriteFrame(AVFrame *frame)
+/// <summary>
+/// 
+/// </summary>
+/// <param name="frame">yuv frame pointer</param>
+/// <returns>error number</returns>
+/// <reference>https://stackoverflow.com/questions/2940671/how-does-one-encode-a-series-of-images-into-h264-using-the-x264-c-api</reference>
+int H264ReadScreenEncoder::WriteFrame(AVFrame* frame)
 {
-	AVCodec *codec;
-//	AVCodecContext *codec_ctx = NULL;
-//	AVFormatContext *format_ctx;
 	AVPacket avpkt;
-	AVFrame * pFrameYUV;
 	int got_output;
 	int ret;
 
-	codec_id = AV_CODEC_ID_H264;
+//	frame->linesize[0] = -1;
 
-	// set packet 
+	// ready to packet data from H.264 encoder
 	av_init_packet(&avpkt);
 	avpkt.size = 0;
-	avpkt.data = 0;
+	avpkt.data = NULL;
 
-	/* find the h264 video encoder */
-	codec = avcodec_find_encoder(codec_id);
-	if (!codec) {
-		fprintf(stderr, "Codec not found\n");
-		exit(1);
+
+	// set to i frame for encoder when frame_count divide with fps
+	if((frame->pts % fps) == 0) {
+		frame->key_frame = 1;
+		frame->pict_type = AV_PICTURE_TYPE_I;
+	} else {
+		frame->key_frame = 0;
+		frame->pict_type = AV_PICTURE_TYPE_P;
 	}
-
-	pCodecCtx = avcodec_alloc_context3(codec);
-	if (!pCodecCtx) {
-		fprintf(stderr, "Could not allocate video codec context\n");
-		exit(1);
-	}
-
-	pCodecCtx->codec_id = AV_CODEC_ID_H264;
-	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
-	pCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
-
-	/* put sample parameters */
-	pCodecCtx->bit_rate = 400000;
-	/* resolution must be a multiple of two */
-	pCodecCtx->width = dstWidth;
-	pCodecCtx->height = dstHeight;
-	/* frames per second */
-	AVRational rational;
-	rational.num = 1;
-	rational.den = 30;
-	pCodecCtx->time_base = rational;
-	pCodecCtx->gop_size = 10; /* emit one intra frame every ten frames */
-	pCodecCtx->max_b_frames = 1;
-	//avcodec_parameters_to_context(codec_ctx, st->codecpar);
-
-	if (codec_id == AV_CODEC_ID_H264)
-		av_opt_set(pCodecCtx->priv_data, "preset", "slow", 0);
-
-	/* open it */
-	if (avcodec_open2(pCodecCtx, codec, NULL) < 0) {
-		fprintf(stderr, "Could not open codec\n");
-		exit(1);
-	}
-#if USE_RGB_FRAME
-	SwsContext * sws_ctx = sws_getContext(pCodecCtx->width, pCodecCtx->height, AV_PIX_FMT_BGR24,
-		pCodecCtx->width, pCodecCtx->height, AV_PIX_FMT_YUV420P,
-		SWS_BICUBIC, NULL, NULL, NULL);
-
-		int numBytes = avpicture_get_size(AV_PIX_FMT_YUV420P, dstWidth, dstHeight);
-	uint8_t * buffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
-
-
-	pFrameYUV = av_frame_alloc();
-
-	avpicture_fill((AVPicture *)pFrameYUV, buffer, AV_PIX_FMT_RGB24, dstWidth, dstHeight);
-
-	sws_scale(sws_ctx,
-		frame->data, frame->linesize,
-		0, pCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
-#elif USE_YUV_FRAME
-	pFrameYUV = frame;
-#endif
 
 	/* encode the image */
-	ret = avcodec_encode_video2(pCodecCtx, &avpkt, pFrameYUV, &got_output);
+	ret = avcodec_encode_video2(pCodecCtx, &avpkt, frame, &got_output);
 	if (ret < 0)
 	{
 		fprintf(stderr, "Error encoding frame [%s:%d]\n", __FILE__, __LINE__);
@@ -391,19 +333,28 @@ int H264ReadScreenEncoder::WriteFrame(AVFrame *frame)
 
 	if (got_output)
 	{
+//		avpkt.stream_index = frame_count;
+		Frame * data = new Frame();
+		data->dataPointer = new uint8_t[avpkt.size];
+		data->dataSize = avpkt.size - 4;
+		data->frameID = frame_count;
+
+		memcpy(data->dataPointer, avpkt.data + 4, avpkt.size - 4);
+
+		pthread_mutex_lock(&outqueue_mutex);
+
+		if (outqueue.size()<30)
+		{
+			outqueue.push(data);
+		}
+		else
+		{
+			delete frame;
+		}
+
+		pthread_mutex_unlock(&outqueue_mutex);
 
 		av_free_packet(&avpkt);
 	}
-	
-#if USE_RGB_FRAME
-	if (pFrameYUV) {
-		av_freep(&(pFrameYUV->data[0]));
-		av_frame_unref(pFrameYUV);
-		av_free(pFrameYUV);
-	}
 
-	av_free(buffer);
-#endif
-
-	//https://stackoverflow.com/questions/2940671/how-does-one-encode-a-series-of-images-into-h264-using-the-x264-c-api
 }

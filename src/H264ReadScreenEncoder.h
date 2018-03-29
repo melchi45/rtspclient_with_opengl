@@ -20,15 +20,13 @@ private:
 	pthread_t thread_id;
 	int thread_exit;
 	int videoindex;
+	int fps;
 
-	int WriteFrame(AVFrame * frame);
+	int WriteFrame(AVFrame* frame);
 	int ReadFrame_from_Screenshot();
 
 protected:
-	AVCodec * pAVCodec;
 	AVFormatContext* pScreenFormatCtx;
 	AVCodecContext* pScreenCodecCtx;
-//	AVStream *pStream;
-//	AVFrame	* pFrameYUV;
 };
 #endif // _H264_READ_CAMERA_ENCODER_H_
