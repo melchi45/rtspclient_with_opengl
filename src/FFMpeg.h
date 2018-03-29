@@ -89,7 +89,11 @@ protected:
 	int save_frame_as_jpeg(AVFrame *pframe);
 	int save_frame_as_png(AVFrame *pframe);
 	int save_frame_as_ppm(AVFrame *pframe);
+	int save_frame_as_yuv420p(AVFrame *pFrame);
+	int save_frame_as_yuv422p(AVFrame *pFrame);
 
+	AVFrame* frame_rgb_yuv420p(AVFrame* pFrame);
+	AVFrame* frame_yuv420p_rgb(AVFrame* pFrame);
 protected:
 	bool m_bInit;
 	AVCodecContext *pCodecCtx;
@@ -98,6 +102,7 @@ protected:
 	AVCodecID	codec_id;
 	AVFrame *pFrame;
 	AVCodec * pCodec;
+	AVStream* pStream;
 
 	DecodeListener* m_plistener;
 	std::function<void(void*)> onFrame;

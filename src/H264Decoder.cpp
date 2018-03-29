@@ -1,6 +1,8 @@
 #include "H264Decoder.h"
 #include "Frame.h"
 
+#define SAVE_AVFRAME_TO_JPEG 1
+
 H264Decoder::H264Decoder()
 	: FFMpeg()
 {
@@ -121,10 +123,14 @@ int H264Decoder::decode(uint8_t* input, int nLen, bool bWaitIFrame /*= false*/)
 				sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize,
 					0, pCodecCtx->height, pFrameRGB->data, pFrameRGB->linesize);
 
+				pFrameRGB->format = AV_PIX_FMT_RGB24;
+				pFrameRGB->width = dstWidth;
+				pFrameRGB->height = dstHeight;
+
 #if defined(SAVE_AVFRAME_TO_PPM)
 				save_frame_as_ppm(pFrameRGB);
 #elif defined(SAVE_AVFRAME_TO_JPEG)
-				save_frame_as_jpeg(decoder_picture);
+				save_frame_as_jpeg(pFrameRGB);
 #endif
 				Frame* frame = new Frame();
 				// memory initialize
