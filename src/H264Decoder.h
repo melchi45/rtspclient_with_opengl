@@ -31,15 +31,21 @@
 *  $Id:
 *  $HeadURL:
 *******************************************************************************/
-#ifndef _H264DECODER_H_
-#define _H264DECODER_H_
+#ifndef _H264_DECODER_H_
+#define _H264_DECODER_H_
 
 #include "FFmpeg.h"
 
 class H264Decoder : public FFMpeg
 {
 public:
+#if USE_LIVE555
+	static H264Decoder *
+		createNew(UsageEnvironment &env);
+	H264Decoder(UsageEnvironment &env);
+#else
 	H264Decoder();
+#endif
 	virtual ~H264Decoder();
 	
 	virtual int intialize();
@@ -48,4 +54,4 @@ public:
 //	int openDecoder(int width, int height, CDecodeCB* pCB);
 	virtual int decode(uint8_t* input, int nLen, bool bWaitIFrame = false);
 };
-#endif // _H264DECODER_H_
+#endif /* _H264_DECODER_H_ */

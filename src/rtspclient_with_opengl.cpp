@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
 
 	}
 	else {
-		H264ReadCameraEncoder enc;
+		//H264ReadCameraEncoder* enc = H264ReadCameraEncoder::createNew(env);
 		//H264ReadScreenEncoder enc;
 
 	}

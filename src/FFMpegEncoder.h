@@ -39,7 +39,11 @@
 class FFMpegEncoder : public FFMpeg
 {
 public:
+#if USE_LIVE555
+	FFMpegEncoder(UsageEnvironment& env);
+#else
 	FFMpegEncoder();
+#endif
 	virtual ~FFMpegEncoder();
 	
 	virtual int intialize();

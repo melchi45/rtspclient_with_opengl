@@ -74,6 +74,8 @@ extern "C" {
 #define AV_PIX_FMT_YUV420P PIX_FMT_YUV420P
 #endif
 
+#define USE_LIVE555	1
+
 class Frame;
 class Listener
 {
@@ -93,10 +95,17 @@ public:
 	virtual void onEncoded() = 0;
 };
 
+#if USE_LIVE555
+class UsageEnvironment;
+#endif
 class FFMpeg
 {
 public:
+#if USE_LIVE555
+	FFMpeg(UsageEnvironment& env);
+#else
 	FFMpeg();
+#endif
 	virtual ~FFMpeg();
 	
 	virtual int intialize();
@@ -136,7 +145,9 @@ protected:
 	AVFrame *pFrame;
 	AVCodec * pCodec;
 	AVStream* pStream;
-
+#if USE_LIVE555
+	UsageEnvironment& fEnviron;
+#endif
 	Listener* m_plistener;
 	std::function<void(void*)> onDecoded;
 	std::function<void()> onEncoded;

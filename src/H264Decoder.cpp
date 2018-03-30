@@ -36,6 +36,23 @@
 
 #define SAVE_AVFRAME_TO_JPEG 1
 
+#if USE_LIVE555
+H264Decoder *
+H264Decoder::createNew(UsageEnvironment &env)
+{
+	return new H264Decoder(env);
+}
+
+H264Decoder::H264Decoder(UsageEnvironment &env)
+	: FFMpeg(env)
+{
+	codec_id = AV_CODEC_ID_H264;
+	dstWidth = 640;
+	dstHeight = 320;
+
+	intialize();
+}
+#else
 H264Decoder::H264Decoder()
 	: FFMpeg()
 {
@@ -45,6 +62,7 @@ H264Decoder::H264Decoder()
 
 	intialize();
 }
+#endif
 
 H264Decoder::~H264Decoder()
 {

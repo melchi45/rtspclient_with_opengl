@@ -34,17 +34,37 @@
 #ifndef _MEDIA_VIDEO_SERVER_MEDIA_SUBSESSION_H
 #define _MEDIA_VIDEO_SERVER_MEDIA_SUBSESSION_H
 
+#include "liveMedia.hh"
+
+typedef enum source_yype {
+	VIDEO_SOURCE_TYPE_CAMERA,
+	VIDEO_SOURCE_TYPE_SCREEN,
+} VIDEO_SOURCE_TYPE;
+
 class MediaVideoServerMediaSubsession: public OnDemandServerMediaSubsession
-  {
-    public:
-      static MediaVideoServerMediaSubsession* createNew(UsageEnvironment& env, StreamReplicator* replicator);
+{
+public:
+	static MediaVideoServerMediaSubsession* createNew(UsageEnvironment& env, VIDEO_SOURCE_TYPE type);
     
-    protected:
-      MediaVideoServerMediaSubsession(UsageEnvironment& env, StreamReplicator* replicator)
-          : OnDemandServerMediaSubsession(env, False), m_replicator(replicator) {};
-      
-      virtual FramedSource* createNewStreamSource(unsigned clientSessionId, unsigned& estBitrate);
-      virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,  unsigned char rtpPayloadTypeIfDynamic, FramedSource* inputSource);    
-  };
+protected:
+	MediaVideoServerMediaSubsession(UsageEnvironment& env, VIDEO_SOURCE_TYPE type)
+		: OnDemandServerMediaSubsession(env, False), video_source_type(type){};
+
+	// redefined virtual functions
+	virtual RTCPInstance* createRTCP(Groupsock* RTCPgs, unsigned totSessionBW, /* in kbps */
+		unsigned char const* cname, RTPSink* sink);
+
+	virtual FramedSource* createNewStreamSource(unsigned clientSessionId, unsigned& estBitrate);
+	virtual RTPSink* createNewRTPSink(Groupsock* rtpGroupsock,  unsigned char rtpPayloadTypeIfDynamic, FramedSource* inputSource);    
+
+	virtual void seekStreamSource(FramedSource* inputSource, double& seekNPT, double streamDuration, u_int64_t& numBytes);
+
+	static void afterPlaying(void* clientData);
+	static void rtcpRRQos(void* clientData);
+
+private:
+	VIDEO_SOURCE_TYPE video_source_type;
+	RTPSink     *fVideoRTPSink; // ditto
+};
 
 #endif /* _MEDIA_VIDEO_SERVER_MEDIA_SUBSESSION_H */

@@ -35,18 +35,82 @@
 #include "MediaVideoStreamSource.h"
 #include "MediaVideoRTPSink.h"
 
-LiveServerMediaSubsession * LiveServerMediaSubsession::createNew(UsageEnvironment& env, StreamReplicator* replicator)
-	{ 
-		return new LiveServerMediaSubsession(env,replicator);
-	}
+#include "H264ReadCameraEncoder.h"
+#include "H264ReadScreenEncoder.h"
+
+MediaVideoServerMediaSubsession * MediaVideoServerMediaSubsession::createNew(UsageEnvironment& env, VIDEO_SOURCE_TYPE type)
+{
+	return new MediaVideoServerMediaSubsession(env, type);
+}
+
+void MediaVideoServerMediaSubsession::rtcpRRQos(void* clientData)
+{
+	// TODO: add process for rtcp RR QOS
+}
+
+RTCPInstance* MediaVideoServerMediaSubsession
+::createRTCP(Groupsock* RTCPgs, unsigned totSessionBW, /* in kbps */
+	unsigned char const* cname, RTPSink* sink)
+{
+	// Default implementation:
+	RTCPInstance      *pRTCPInstance = NULL;
+
+	pRTCPInstance = RTCPInstance::createNew(envir(), RTCPgs, totSessionBW,
+		cname, sink, NULL/*we're a server*/);
+
+	if (pRTCPInstance)
+		pRTCPInstance->setRRHandler(rtcpRRQos, this);
+
+	return pRTCPInstance;
+}
+
 					
-	FramedSource* LiveServerMediaSubsession::createNewStreamSource(unsigned clientSessionId, unsigned& estBitrate)
-	{
-		FramedSource* source = m_replicator->createStreamReplica();
-		return H264VideoStreamDiscreteFramer::createNew(envir(), source);
+FramedSource* MediaVideoServerMediaSubsession
+::createNewStreamSource(unsigned clientSessionId, unsigned& estBitrate)
+{
+	FFMpegEncoder* encoder = NULL;
+
+	// create new encoder with video source type
+	switch(video_source_type) {
+	case VIDEO_SOURCE_TYPE_CAMERA:
+		break;
+	case VIDEO_SOURCE_TYPE_SCREEN:
+		break;
+	default:
+		break;
+
 	}
+	// generate video stream source
+	MediaVideoStreamSource *pVideoSource = MediaVideoStreamSource::createNew(envir(), encoder);
+
+	return H264VideoStreamDiscreteFramer::createNew(envir(), pVideoSource);
+}
+
+void MediaVideoServerMediaSubsession::afterPlaying(void* clientData)
+{
+	// TODO: add process after playing
+}
 		
-	RTPSink* LiveServerMediaSubsession::createNewRTPSink(Groupsock* rtpGroupsock,  unsigned char rtpPayloadTypeIfDynamic, FramedSource* inputSource)
-	{
-		return H264VideoRTPSink::createNew(envir(), rtpGroupsock,rtpPayloadTypeIfDynamic);
-	}
+RTPSink* MediaVideoServerMediaSubsession
+::createNewRTPSink(Groupsock* rtpGroupsock,  unsigned char rtpPayloadTypeIfDynamic, FramedSource* inputSource)
+{
+	fVideoRTPSink = MediaVideoRTPSink::createNew(envir(), rtpGroupsock, rtpPayloadTypeIfDynamic);
+	MediaVideoStreamSource* pVideoSource = (MediaVideoStreamSource*)inputSource;
+	//log_rtsp("SDP = %s", getAuxSDPLine(fVidRTPSink, pAmbaSource));
+	envir() << "Amba Video SDP: " << getAuxSDPLine(fVideoRTPSink, pVideoSource);
+	// Finally, start playing:
+	//envir() << "Beginning to read from UPP...\n";
+	fVideoRTPSink->startPlaying(*pVideoSource, MediaVideoServerMediaSubsession::afterPlaying, fVideoRTPSink);
+
+	return fVideoRTPSink;
+}
+
+void MediaVideoServerMediaSubsession
+::seekStreamSource(FramedSource* inputSource, double& seekNPT, double streamDuration,
+	u_int64_t& /*numBytes*/)
+{
+	MediaVideoStreamSource   *pVideoSource = (MediaVideoStreamSource*)inputSource;
+
+//	if ((float)seekNPT < fDuration)
+//		pVideoSource->seekStream((int32_t)seekNPT);
+}

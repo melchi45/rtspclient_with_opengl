@@ -35,9 +35,6 @@
 #include "GroupsockHelper.hh"
 #include "FFMpegEncoder.h"
 
-#define REV_BUF_SIZE  (1024*1024) 
-#define FRAME_PER_SEC 25 
-
 MediaVideoStreamSource * MediaVideoStreamSource::createNew(UsageEnvironment& env, FFMpegEncoder * enc) {
 	return new MediaVideoStreamSource(env, enc);
 }

@@ -38,11 +38,19 @@
 //#define USE_RGB_FRAME	1
 #define FPS		30
 
+#if USE_LIVE555
+FFMpegEncoder::FFMpegEncoder(UsageEnvironment& env)
+	: FFMpeg(env)
+	, thread_exit(0)
+{
+}
+#else
 FFMpegEncoder::FFMpegEncoder()
 	: FFMpeg()
 	, thread_exit(0)
 {
 }
+#endif
 
 FFMpegEncoder::~FFMpegEncoder()
 {

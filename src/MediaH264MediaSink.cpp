@@ -98,7 +98,12 @@ MediaH264MediaSink::MediaH264MediaSink(UsageEnvironment& env, RTSPClient* client
 #if 0
   video_decoder = new FFmpegDecoder(env);
 #else
+
+#if USE_LIVE555
+  video_decoder = H264Decoder::createNew(env);
+#else
   video_decoder = new H264Decoder();
+#endif
 #endif
   if (video_decoder == NULL)
   {

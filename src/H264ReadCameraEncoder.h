@@ -39,7 +39,13 @@
 class H264ReadCameraEncoder : public FFMpegEncoder
 {
 public:
+#if USE_LIVE555
+	static FFMpegEncoder *
+		createNew(UsageEnvironment &env);
+	H264ReadCameraEncoder(UsageEnvironment &env);
+#else
 	H264ReadCameraEncoder();
+#endif
 	virtual ~H264ReadCameraEncoder();
 	
 	virtual int intialize();

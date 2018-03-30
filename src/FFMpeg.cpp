@@ -33,6 +33,23 @@
 *******************************************************************************/
 #include "FFMpeg.h"
 
+#if USE_LIVE555
+FFMpeg::FFMpeg(UsageEnvironment& env)
+	: frame_count(0)
+	, m_bInit(false)
+	, img_convert_ctx(NULL)
+	, codec_id(AV_CODEC_ID_NONE)
+	, sws_flags(SWS_BICUBIC) // https://blog.csdn.net/leixiaohua1020/article/details/42134965
+	, pFormatCtx(NULL)
+	, pFrame(NULL)
+	, pStream(NULL)
+	, m_plistener(NULL)
+	, fEnviron(env)
+{
+	pthread_mutex_init(&inqueue_mutex, NULL);
+	pthread_mutex_init(&outqueue_mutex, NULL);
+}
+#else
 FFMpeg::FFMpeg()
 	: frame_count(0)
 	, m_bInit(false)
@@ -47,6 +64,7 @@ FFMpeg::FFMpeg()
 	pthread_mutex_init(&inqueue_mutex, NULL);
 	pthread_mutex_init(&outqueue_mutex, NULL);
 }
+#endif
 
 FFMpeg::~FFMpeg()
 {

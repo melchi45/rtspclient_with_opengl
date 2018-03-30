@@ -39,7 +39,13 @@
 class H264ReadScreenEncoder : public FFMpegEncoder
 {
 public:
+#if USE_LIVE555
+	static FFMpegEncoder *
+		createNew(UsageEnvironment &env);
+	H264ReadScreenEncoder(UsageEnvironment &env);
+#else
 	H264ReadScreenEncoder();
+#endif
 	virtual ~H264ReadScreenEncoder();
 	
 	virtual int intialize();

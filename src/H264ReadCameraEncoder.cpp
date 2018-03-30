@@ -38,6 +38,26 @@
 //#define USE_RGB_FRAME	1
 #define FPS		30
 
+#if USE_LIVE555
+FFMpegEncoder *
+H264ReadCameraEncoder::createNew(UsageEnvironment &env)
+{
+	return new H264ReadCameraEncoder(env);
+}
+
+H264ReadCameraEncoder::H264ReadCameraEncoder(UsageEnvironment &env)
+	: FFMpegEncoder(env)
+	, thread_exit(0)
+	, videoindex(-1)
+	, fps(30)
+{
+	codec_id = AV_CODEC_ID_H264;
+	dstWidth = 640;
+	dstHeight = 320;
+
+	intialize();
+}
+#else
 H264ReadCameraEncoder::H264ReadCameraEncoder()
 	: FFMpegEncoder()
 	, thread_exit(0)
@@ -50,6 +70,7 @@ H264ReadCameraEncoder::H264ReadCameraEncoder()
 
 	intialize();
 }
+#endif
 
 H264ReadCameraEncoder::~H264ReadCameraEncoder()
 {
