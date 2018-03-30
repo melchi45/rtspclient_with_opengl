@@ -1,17 +1,36 @@
-/*
-  YUV420P Player
-  --------------
-  This class implements a simple YUV420P renderer. This means that you
-  need to feed planar YUV420 data to the `setYPixels()`, `setUPixels()`
-  and `setVPixels()`.
-  First make sure to call setup() with the video width and height. We use
-  these dimensions to allocate the Y, U and V textures. After calling setup
-  you call the zset{Y,U,V}Pixels()` everytime you have a new frame that
-  you want to render. With the `draw()` function you draw the current
-  frame to the screen.
-  If you resize your viewport, make sure to  call `resize()` so we can
-  adjust the projection matrix.
- */
+/*******************************************************************************
+*  Copyright (c) 1998 MFC Forum
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*
+* Module Name:
+*
+* Revision History:
+*
+* Date        Ver Name                    Description
+* ----------  --- --------------------- -----------------------------------------
+* 07-Jun-2016 0.1 Youngho Kim             Created
+* ----------  --- --------------------- -----------------------------------------
+*
+* DESCRIPTION:
+*
+*  $Author:
+*  $LastChangedBy:
+*  $Date:
+*  $Revision: 2949 $
+*  $Id:
+*  $HeadURL:
+*******************************************************************************/
 #ifndef ROXLU_YUV420P_PLAYER_H
 #define ROXLU_YUV420P_PLAYER_H
 
