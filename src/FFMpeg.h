@@ -42,10 +42,22 @@ extern "C" {
 #endif
 
 class Frame;
-class DecodeListener
+class Listener
+{
+private:
+
+};
+
+class DecodeListener : public Listener
 {
 public:
-	virtual void onFrame(void* frame) = 0;
+	virtual void onDecoded(void* frame) = 0;
+};
+
+class EncodeListener : public Listener
+{
+public:
+	virtual void onEncoded() = 0;
 };
 
 class FFMpeg
@@ -59,19 +71,10 @@ public:
 
 	//virtual int decode(uint8_t* input, int nLen, bool bWaitIFrame = false) = 0;
 
-	void setOnframeCallbackFunction(std::function<void(void*)> func);
+	void setOnDecodedCallbackFunction(std::function<void(void*)> func);
+	void setOnEncodedCallbackFunction(std::function<void()> func);
 
-	void setListener(DecodeListener* listener) { m_plistener = listener; }
-	//void setAVCodec(AVCodecID codec) { codec_id = codec; }
-	//AVCodecID& geAVtCodec() { return codec_id;  }
-
-//	void setAVCodecContext(AVCodecContext* ctx) { pCodecCtx = ctx; }
-//	AVCodecContext* getAVCodecContext() { return pCodecCtx; }
-
-//	void setAVFrame(AVFrame* frame) { pFrame = frame; }
-//	AVFrame* getAVFrame() { return pFrame; }
-
-//	void increase_frame_count() { frame_count++; }
+	void setListener(Listener* listener) { m_plistener = listener; }
 
 	void setDstWidth(int width) { dstWidth = width; }
 	void setDstHeight(int height) { dstHeight = height; }
@@ -81,9 +84,6 @@ public:
 
 	void setSWSType(int type) { sws_flags = type; }
 	int getSWSType() { return sws_flags; }
-
-	Frame* PopFrame();
-//	Frame* PushFrame();
 
 protected:
 	int save_frame_as_jpeg(AVFrame *pframe);
@@ -104,8 +104,9 @@ protected:
 	AVCodec * pCodec;
 	AVStream* pStream;
 
-	DecodeListener* m_plistener;
-	std::function<void(void*)> onFrame;
+	Listener* m_plistener;
+	std::function<void(void*)> onDecoded;
+	std::function<void()> onEncoded;
 
 	int srcWidth, dstWidth;
 	int srcHeight, dstHeight;

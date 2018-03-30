@@ -9,15 +9,14 @@ FFMpeg::FFMpeg()
 	, pFormatCtx(NULL)
 	, pFrame(NULL)
 	, pStream(NULL)
+	, m_plistener(NULL)
 {
-	//intialize();
 	pthread_mutex_init(&inqueue_mutex, NULL);
 	pthread_mutex_init(&outqueue_mutex, NULL);
 }
 
 FFMpeg::~FFMpeg()
 {
-	//finalize();
 }
 
 int FFMpeg::intialize()
@@ -71,9 +70,14 @@ int FFMpeg::finalize()
 	return 0;
 }
 
-void FFMpeg::setOnframeCallbackFunction(std::function<void(void*)> func)
+void FFMpeg::setOnDecodedCallbackFunction(std::function<void(void*)> func)
 {
-	onFrame = func;
+	onDecoded = func;
+}
+
+void FFMpeg::setOnEncodedCallbackFunction(std::function<void()> func)
+{
+	onEncoded = func;
 }
 
 int FFMpeg::save_frame_as_ppm(AVFrame *pframe)
@@ -477,15 +481,4 @@ AVFrame* FFMpeg::frame_yuv420p_rgb(AVFrame* pframe)
 		0, pFrameRGB->height, pFrameRGB->data, pFrameRGB->linesize);
 
 	return pFrameRGB;
-}
-
-
-Frame* FFMpeg::PopFrame()
-{
-	if (!outqueue.empty())
-	{
-		Frame * frame;
-		frame = outqueue.front();
-		return frame;
-	}
 }

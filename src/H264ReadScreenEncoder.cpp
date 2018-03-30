@@ -3,11 +3,10 @@
 
 #define USE_YUV_FRAME	1
 //#define USE_RGB_FRAME	1
-
 #define FPS				30
 
 H264ReadScreenEncoder::H264ReadScreenEncoder()
-	: FFMpeg()
+	: FFMpegEncoder()
 	, thread_exit(0)
 	, videoindex(-1)
 	, fps(30)
@@ -26,22 +25,11 @@ H264ReadScreenEncoder::~H264ReadScreenEncoder()
 
 int H264ReadScreenEncoder::intialize()
 {	
-	FFMpeg::intialize();
+	return FFMpegEncoder::intialize();
+}
 
-	/// create codec context for encoder
-	/* find the h264 video encoder */
-	pCodec = avcodec_find_encoder(codec_id);
-	if (!pCodec) {
-		fprintf(stderr, "Codec not found\n");
-		exit(1);
-	}
-
-	pCodecCtx = avcodec_alloc_context3(pCodec);
-	if (!pCodecCtx) {
-		fprintf(stderr, "Could not allocate video codec context\n");
-		exit(1);
-	}
-
+int H264ReadScreenEncoder::SetupCodec()
+{
 	pCodecCtx->codec_id = AV_CODEC_ID_H264;
 	pCodecCtx->codec_type = AVMEDIA_TYPE_VIDEO;
 	pCodecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -75,13 +63,14 @@ int H264ReadScreenEncoder::intialize()
 	/* open it */
 	if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
 		fprintf(stderr, "avcodec_open failed for h.264 encode\n");
-		exit(1);
+		return -3;
 	}
 
 	/// create codec context for screen capture
-	pScreenFormatCtx = avformat_alloc_context();
-	if (pScreenFormatCtx == NULL) {
-//		throw AVException(ENOMEM, "can not alloc av context");
+	pSourceFormatCtx = avformat_alloc_context();
+	if (pSourceFormatCtx == NULL) {
+		//		throw AVException(ENOMEM, "can not alloc av context");
+		return -4;
 	}
 
 #ifdef _WIN32
@@ -93,7 +82,7 @@ int H264ReadScreenEncoder::intialize()
 	//Website: http://sourceforge.net/projects/screencapturer/
 	//
 	AVInputFormat *ifmt = av_find_input_format("dshow");
-	if (avformat_open_input(&pScreenFormatCtx, "video=screen-capture-recorder", ifmt, NULL) != 0) {
+	if (avformat_open_input(&pSourceFormatCtx, "video=screen-capture-recorder", ifmt, NULL) != 0) {
 		printf("Couldn't open input stream.\n");
 		return -1;
 	}
@@ -110,9 +99,9 @@ int H264ReadScreenEncoder::intialize()
 	//Video frame size. The default is to capture the full screen
 	//av_dict_set(&options,"video_size","640x480",0);
 	AVInputFormat *ifmt = av_find_input_format("gdigrab");
-	if (avformat_open_input(&pScreenFormatCtx, "desktop", ifmt, &options) != 0) {
+	if (avformat_open_input(&pSourceFormatCtx, "desktop", ifmt, &options) != 0) {
 		printf("Couldn't open input stream.\n");
-		return -1;
+		return -5;
 	}
 
 #endif
@@ -128,7 +117,7 @@ int H264ReadScreenEncoder::intialize()
 	//av_dict_set(&options,"video_size","640x480",0);
 	AVInputFormat *ifmt = av_find_input_format("x11grab");
 	//Grab at position 10,20
-	if (avformat_open_input(&pScreenFormatCtx, ":0.0+10,20", ifmt, &options) != 0) {
+	if (avformat_open_input(&pSourceFormatCtx, ":0.0+10,20", ifmt, &options) != 0) {
 		printf("Couldn't open input stream.\n");
 		return -1;
 	}
@@ -138,20 +127,20 @@ int H264ReadScreenEncoder::intialize()
 	AVInputFormat *ifmt = av_find_input_format("avfoundation");
 	//Avfoundation
 	//[video]:[audio]
-	if (avformat_open_input(&pScreenFormatCtx, "1", ifmt, NULL) != 0) {
+	if (avformat_open_input(&pSourceFormatCtx, "1", ifmt, NULL) != 0) {
 		printf("Couldn't open input stream.\n");
 		return -1;
 	}
 #endif
 
-	if (avformat_find_stream_info(pScreenFormatCtx, NULL)<0)
+	if (avformat_find_stream_info(pSourceFormatCtx, NULL)<0)
 	{
 		printf("Couldn't find stream information.\n");
-		return -1;
+		return -6;
 	}
 
-	for (int i = 0; i < pScreenFormatCtx->nb_streams; i++)
-		if (pScreenFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+	for (int i = 0; i < pSourceFormatCtx->nb_streams; i++)
+		if (pSourceFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
 		{
 			videoindex = i;
 			break;
@@ -159,19 +148,19 @@ int H264ReadScreenEncoder::intialize()
 	if (videoindex == -1)
 	{
 		printf("Couldn't find a video stream.\n");
-		return -1;
+		return -7;
 	}
-	pScreenCodecCtx = pScreenFormatCtx->streams[videoindex]->codec;
-	AVCodec * codec = avcodec_find_decoder(pScreenCodecCtx->codec_id);
+	pSourceCodecCtx = pSourceFormatCtx->streams[videoindex]->codec;
+	AVCodec * codec = avcodec_find_decoder(pSourceCodecCtx->codec_id);
 	if (codec == NULL)
 	{
 		printf("Codec not found.\n");
-		return -1;
+		return -8;
 	}
-	if (avcodec_open2(pScreenCodecCtx, codec, NULL)<0)
+	if (avcodec_open2(pSourceCodecCtx, codec, NULL)<0)
 	{
 		printf("Could not open codec.\n");
-		return -1;
+		return -9;
 	}
 
 	pthread_attr_t attr1;
@@ -181,7 +170,7 @@ int H264ReadScreenEncoder::intialize()
 	if (r)
 	{
 		perror("pthread_create()");
-		return -1;
+		return -10;
 	}
 
 	// wait for threads to finish
@@ -194,42 +183,28 @@ int H264ReadScreenEncoder::intialize()
 
 int H264ReadScreenEncoder::finalize()
 {
-	if (pScreenCodecCtx)
-	{
-		avcodec_close(pScreenCodecCtx);
-		av_free(pScreenCodecCtx);
-	}
-
-	if (pScreenFormatCtx) {
-		avformat_free_context(pScreenFormatCtx);
-	}
-
-	return FFMpeg::finalize();
+	return FFMpegEncoder::finalize();
 }
 
-void* H264ReadScreenEncoder::run(void *param)
-{
-	H264ReadScreenEncoder *pThis = (H264ReadScreenEncoder*)param;
-	pThis->ReadFrame_from_Screenshot();
-	return NULL;
-}
-
-int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
+int H264ReadScreenEncoder::ReadFrame()
 {
 	int ret, got_picture;
-//	uint8_t *yPlane, *uPlane, *vPlane;
-//	size_t yPlaneSz, uvPlaneSz;
-//	int uvPitch;
 
 	try {
 		AVPacket *packet = (AVPacket *)av_malloc(sizeof(AVPacket));
-		img_convert_ctx = sws_getContext(pScreenCodecCtx->width, pScreenCodecCtx->height, pScreenCodecCtx->pix_fmt, pScreenCodecCtx->width, pScreenCodecCtx->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+		img_convert_ctx = sws_getContext(
+			pSourceCodecCtx->width,
+			pSourceCodecCtx->height,
+			pSourceCodecCtx->pix_fmt,
+			pSourceCodecCtx->width,
+			pSourceCodecCtx->height,
+			AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
 
 		while (!thread_exit) {
 			// raed frame from screen capture device (gdigrab)
-			if (av_read_frame(pScreenFormatCtx, packet) >= 0) {
+			if (av_read_frame(pSourceFormatCtx, packet) >= 0) {
 				if (packet->stream_index == videoindex) {
-					ret = avcodec_decode_video2(pScreenCodecCtx, pFrame, &got_picture, packet);
+					ret = avcodec_decode_video2(pSourceCodecCtx, pFrame, &got_picture, packet);
 					if (ret < 0) {
 						printf("Decode Error.\n");
 						return -1;
@@ -237,8 +212,8 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 					if (got_picture)
 					{
 						// set image size
-						srcWidth = pScreenCodecCtx->width;
-						srcHeight = pScreenCodecCtx->height;
+						srcWidth = pSourceCodecCtx->width;
+						srcHeight = pSourceCodecCtx->height;
 						// calculate byte size from rgb image by width and height
 
 						int numBytes = avpicture_get_size(AV_PIX_FMT_YUV420P, dstWidth, dstHeight);
@@ -259,9 +234,9 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 
 						// get scaling context from context image size to destination image size
 						img_convert_ctx = sws_getCachedContext(img_convert_ctx,
-							pScreenCodecCtx->width, // width of source image
-							pScreenCodecCtx->height, // height of source image 
-							pScreenCodecCtx->pix_fmt,
+							pSourceCodecCtx->width, // width of source image
+							pSourceCodecCtx->height, // height of source image 
+							pSourceCodecCtx->pix_fmt,
 							dstWidth, // width of destination image
 							dstHeight, // height of destination image
 							AV_PIX_FMT_YUV420P, getSWSType(), NULL, NULL, NULL);
@@ -272,7 +247,7 @@ int H264ReadScreenEncoder::ReadFrame_from_Screenshot()
 						}
 						// scaling
 						sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize,
-							0, pScreenCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
+							0, pSourceCodecCtx->height, pFrameYUV->data, pFrameYUV->linesize);
 
 						save_frame_as_jpeg(pFrameYUV);
 
@@ -318,14 +293,11 @@ int H264ReadScreenEncoder::WriteFrame(AVFrame* frame)
 	int got_output;
 	int ret;
 
-//	frame->linesize[0] = -1;
-
 	// ready to packet data from H.264 encoder
 	av_init_packet(&avpkt);
 	avpkt.size = 0;
 	avpkt.data = NULL;
-
-
+	
 	// set to i frame for encoder when frame_count divide with fps
 	if((frame->pts % fps) == 0) {
 		frame->key_frame = 1;
@@ -370,6 +342,12 @@ int H264ReadScreenEncoder::WriteFrame(AVFrame* frame)
 		pthread_mutex_unlock(&outqueue_mutex);
 
 		av_free_packet(&avpkt);
-	}
 
+		if (m_plistener != NULL) {
+			((EncodeListener*)m_plistener)->onEncoded();
+		}
+		else if (onEncoded != NULL) {
+			onEncoded();
+		}
+	}
 }

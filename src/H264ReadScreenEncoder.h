@@ -1,9 +1,9 @@
-#ifndef _H264_READ_CAMERA_ENCODER_H_
-#define _H264_READ_CAMERA_ENCODER_H_
+#ifndef _H264_READ_SCREEN_ENCODER_H_
+#define _H264_READ_SCREEN_ENCODER_H_
 
-#include "FFmpeg.h"
+#include "FFMpegEncoder.h"
 
-class H264ReadScreenEncoder : public FFMpeg
+class H264ReadScreenEncoder : public FFMpegEncoder
 {
 public:
 	H264ReadScreenEncoder();
@@ -12,9 +12,8 @@ public:
 	virtual int intialize();
 	virtual int finalize();
 
-	static void *run(void *param);
-//	int openDecoder(int width, int height, CDecodeCB* pCB);
-//	int encode(uint8_t* input, int nLen, bool bWaitIFrame = false);
+protected:
+	virtual int SetupCodec();
 
 private:
 	pthread_t thread_id;
@@ -22,11 +21,7 @@ private:
 	int videoindex;
 	int fps;
 
-	int WriteFrame(AVFrame* frame);
-	int ReadFrame_from_Screenshot();
-
-protected:
-	AVFormatContext* pScreenFormatCtx;
-	AVCodecContext* pScreenCodecCtx;
+	virtual int ReadFrame();
+	virtual int WriteFrame(AVFrame* frame);
 };
-#endif // _H264_READ_CAMERA_ENCODER_H_
+#endif // _H264_READ_SCREEN_ENCODER_H_

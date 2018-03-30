@@ -578,7 +578,7 @@ void MediaRTSPSession::videoCB(int width, int height, uint8_t* buff, int len, in
 	}
 }
 #else
-void MediaRTSPSession::onFrame(void* frame)
+void MediaRTSPSession::onDecoded(void* frame)
 {
 	// copy to buffer vector
 	if (frame != NULL) {

@@ -124,7 +124,7 @@ protected:
 #if 0
 	virtual void videoCB(int width, int height, uint8_t* buff, int len, int pitch, RTSPClient* client);
 #else
-	virtual void onFrame(void* frame);
+	virtual void onDecoded(void* frame);
 #endif
 };
 

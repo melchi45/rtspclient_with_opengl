@@ -146,9 +146,9 @@ int H264Decoder::decode(uint8_t* input, int nLen, bool bWaitIFrame /*= false*/)
 				frame->pitch = pFrameRGB->linesize[0];
 
 				if (m_plistener != NULL) {
-					m_plistener->onFrame(frame);
-				} else if (onFrame != NULL) {
-					onFrame(frame);
+					((DecodeListener*)m_plistener)->onDecoded(frame);
+				} else if (onDecoded != NULL) {
+					onDecoded(frame);
 				}
 
 				av_free(buffer);
