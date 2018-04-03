@@ -136,11 +136,17 @@ int main(int argc, char** argv) {
 
 			return -1;
 		}
-
-	}
-	else {
+	} else {
 		//H264ReadCameraEncoder* enc = H264ReadCameraEncoder::createNew(env);
 		//H264ReadScreenEncoder enc;
+		pRtsp->setDebugLevel(1);
+		if (pRtsp->startRTSPServer())
+		{
+			delete pRtsp;
+			pRtsp = NULL;
+
+			return -1;
+		}
 
 	}
 	while (true) {

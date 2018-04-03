@@ -37,6 +37,7 @@
 #include "GroupsockHelper.hh"
 #include "BasicUsageEnvironment.hh"
 #include "MediaRTSPClient.h"
+#include "MediaRTSPServer.h"
 #include "DummySink.h"
 #include "MediaH264MediaSink.h"
 #include "liveMedia.hh"
@@ -53,7 +54,6 @@
 char const* clientProtocolName = "RTSP";
 int windows_width;
 int windows_height;
-
 
 // RTSP 'response handlers':
 void continueAfterDESCRIBE(RTSPClient* rtspClient, int resultCode, char* resultString);
@@ -91,6 +91,7 @@ void usage(UsageEnvironment& env, char const* progName) {
 
 MediaRTSPSession::MediaRTSPSession()
 	: m_rtspClient(NULL)
+	, m_rtspServer(NULL)
 	, bTransportStream(false)
 	, m_port(0)
 	, m_username("")
@@ -99,6 +100,7 @@ MediaRTSPSession::MediaRTSPSession()
 	, m_rtspUrl("")
 	, screen_radio(HD)
 	, m_debugLevel(0)
+	, m_authDB(NULL)
 #if defined(USE_GLFW_LIB)
 	, window(NULL)
 #elif defined(USE_SDL2_LIB)
@@ -211,7 +213,39 @@ int MediaRTSPSession::startRTSPClient(const char* progName, const char* rtspURL,
 	return 0;
 }
 
+int MediaRTSPSession::startRTSPServer(const int portnum /*= 554*/, 
+	const char* username/* = NULL*/, const char* password/* = NULL*/)
+{
+	if (username != NULL) this->m_username = std::string(username);
+	if (password != NULL) this->m_password = std::string(password);
+
+	m_port = portnum;
+
+	if (username != NULL && password != NULL) {
+		// To implement client access control to the RTSP server, do the following:
+		m_authDB = new UserAuthenticationDatabase;
+		m_authDB->addUserRecord(username, password); // replace these with real strings
+												   // Repeat the above with each <username>, <password> that you wish to allow
+												   // access to the server.
+	}
+
+	eventLoopWatchVariable = 0;
+
+	int r = pthread_create(&tid, NULL, rtsp_server_thread_fun, this);
+	if (r)
+	{
+		perror("pthread_create()");
+		return -1;
+	}
+}
+
 int MediaRTSPSession::stopRTSPClient()
+{
+	eventLoopWatchVariable = 1;
+	return 0;
+}
+
+int MediaRTSPSession::stopRTSPServer()
 {
 	eventLoopWatchVariable = 1;
 	return 0;
@@ -221,6 +255,13 @@ void *MediaRTSPSession::rtsp_thread_fun(void *param)
 {
 	MediaRTSPSession *pThis = (MediaRTSPSession*)param;
 	pThis->rtsp_fun();
+	return NULL;
+}
+
+void *MediaRTSPSession::rtsp_server_thread_fun(void *param)
+{
+	MediaRTSPSession *pThis = (MediaRTSPSession*)param;
+	pThis->rtspserver_fun();
 	return NULL;
 }
 
@@ -245,12 +286,12 @@ void *MediaRTSPSession::sdl2_thread_fun(void *param)
 void MediaRTSPSession::rtsp_fun()
 {
 	//::startRTSP(m_progName.c_str(), m_rtspUrl.c_str(), m_ndebugLever);
-	taskScheduler = BasicTaskScheduler::createNew();
-	usageEnvironment = MediaBasicUsageEnvironment::createNew(*taskScheduler);
-	if (openURL(*usageEnvironment) == 0)
+	m_taskScheduler = BasicTaskScheduler::createNew();
+	m_usageEnvironment = MediaBasicUsageEnvironment::createNew(*m_taskScheduler);
+	if (openURL(*m_usageEnvironment) == 0)
 	{
 //		m_nStatus = 1;
-		usageEnvironment->taskScheduler().doEventLoop(&eventLoopWatchVariable);
+		m_usageEnvironment->taskScheduler().doEventLoop(&eventLoopWatchVariable);
 
 		m_running = false;
 		eventLoopWatchVariable = 0;
@@ -262,13 +303,55 @@ void MediaRTSPSession::rtsp_fun()
 		m_rtspClient = NULL;
 	}
 
-	usageEnvironment->reclaim();
-	usageEnvironment = NULL;
+	m_usageEnvironment->reclaim();
+	m_usageEnvironment = NULL;
 
-	delete taskScheduler;
-	taskScheduler = NULL;
+	delete m_taskScheduler;
+	m_taskScheduler = NULL;
 //	m_nStatus = 2;
 }
+
+void MediaRTSPSession::rtspserver_fun()
+{
+	m_taskScheduler = BasicTaskScheduler::createNew();
+	m_usageEnvironment = MediaBasicUsageEnvironment::createNew(*m_taskScheduler);
+
+	m_rtspServer = MediaRTSPServer::createNew(*m_usageEnvironment, m_port, m_authDB);
+	if (m_rtspServer == NULL) {
+		*m_usageEnvironment << "LIVE555: Failed to create RTSP server: %s\n", m_usageEnvironment->getResultMsg();
+	}
+
+	char* urlPrefix = m_rtspServer->rtspURLPrefix();
+	*m_usageEnvironment << "Play streams from this server using the URL:" << urlPrefix << ", type: " << LIVE_VEIW_NAME << "\n";
+//	*m_usageEnvironment << "where <file path> is a file present in the current directory: " << urlPrefix, "/{file path}/{file name}");
+
+	if (m_rtspServer->setUpTunnelingOverHTTP(8000) || m_rtspServer->setUpTunnelingOverHTTP(8080)) {
+		*m_usageEnvironment << "We use port " << m_rtspServer->httpServerPortNum()
+			<< " for optional RTSP-over-HTTP tunneling, or for HTTP live streaming (for indexed Transport Stream files only).)\n\n\n";
+	}
+	else {
+		*m_usageEnvironment << "(RTSP-over-HTTP tunneling is not available.)\n\n\n";
+	}
+
+	m_usageEnvironment->taskScheduler().doEventLoop(&eventLoopWatchVariable);
+
+	m_running = false;
+	eventLoopWatchVariable = 0;
+
+	if (m_rtspServer)
+	{
+		// TODO: release rtsp server
+		//shutdownStream(m_rtspServer, 0);
+	}
+	m_rtspServer = NULL;
+
+	m_usageEnvironment->reclaim();
+	m_usageEnvironment = NULL;
+
+	delete m_taskScheduler;
+	m_taskScheduler = NULL;
+}
+
 #ifdef USE_GLFW_LIB
 static void resize_callback(GLFWwindow* window, int width, int height) {
 //	if (player_ptr) {

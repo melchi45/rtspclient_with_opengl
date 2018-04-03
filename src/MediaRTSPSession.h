@@ -78,7 +78,9 @@ typedef enum screen_ratio {
 
 class TaskScheduler;
 class UsageEnvironment;
+class UserAuthenticationDatabase;
 class RTSPClient;
+class RTSPServer;
 #if 0
 class MediaRTSPSession : public CDecodeCB
 #else
@@ -91,7 +93,12 @@ public:
 	int startRTSPClient(const char* progName, const char* rtspURL, 
 		const char* username = NULL, const char* password = NULL, 
 		bool bInterleaved = false, bool bTransportStream = false);
+
+	int startRTSPServer(const int portnum = 554, 
+		const char* username = NULL, const char* password = NULL);
+
 	int stopRTSPClient();
+	int stopRTSPServer();
 	int openURL(UsageEnvironment& env);
 	bool isTransportStream() { return bTransportStream; }
 	void setTransportStream(bool flag) { bTransportStream = flag; }
@@ -104,8 +111,10 @@ public:
 
 private:
 	RTSPClient* m_rtspClient;
-	TaskScheduler* taskScheduler;
-	UsageEnvironment* usageEnvironment;
+	RTSPServer* m_rtspServer;
+	TaskScheduler* m_taskScheduler;
+	UsageEnvironment* m_usageEnvironment;
+	UserAuthenticationDatabase* m_authDB;
 
 	char eventLoopWatchVariable;
 	bool bTransportStream;
@@ -145,7 +154,10 @@ private:
 #endif
 
 	static void *rtsp_thread_fun(void *param);
+	static void *rtsp_server_thread_fun(void *param);
+	
 	void rtsp_fun();
+	void rtspserver_fun();
 #if defined(USE_GLFW_LIB)
 	static void *glfw3_thread_fun(void *param);
 	void glfw3_fun();
