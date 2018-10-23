@@ -120,15 +120,28 @@ if ( USE_SDL2_LIBS )
     message("Found SDL2 libraries")
     message("SDL2_INCLUDE_DIR = ${SDL2_INCLUDE_DIR} ")
     message("SDL2_LIBRARY = ${SDL2_LIBRARY} ")
+	add_definitions(-DUSE_SDL2_LIB)
   endif ()
   
+  find_package(OpenGL REQUIRED)
+  if(OPENGL_FOUND)
+    message("OPENGL_LIBRARIES = ${OPENGL_LIBRARIES} ")
+    message("OPENGL_INCLUDE_DIRS = ${OPENGL_INCLUDE_DIRS} ")
+	set(USE_OPENGL_LIB TRUE)
+  endif()
+  
+  find_package(GLEW REQUIRED) # First try to find using the find_package method (works with vcpkg)
+  if(GLEW_FOUND) # Works with some other methods
+  	message(STATUS "GLEW_INCLUDE_PATH=${GLEW_INCLUDE_PATH}")
+  	message(STATUS "GLEW_LIBRARIES=${GLEW_LIBRARIES}")
+	set(USE_GLEW_LIB TRUE)
+  endif()
+
   #find_package(SDL2_ttf REQUIRED)
   #include_directories(${SDL2_TTF_INCLUDE_DIR})
 
   #find_package(SDL2_image REQUIRED)
   #include_directories(${SDL2_IMAGE_INCLUDE_DIR})
-
-  add_definitions(-DUSE_SDL2_LIB)
 else ( )
   set(USE_GLFW_LIB TRUE)
   message(STATUS "Use OpenGL/GLFW Library for Renderer windows")
@@ -136,18 +149,21 @@ else ( )
   if(OPENGL_FOUND)
     message("OPENGL_LIBRARIES = ${OPENGL_LIBRARIES} ")
     message("OPENGL_INCLUDE_DIRS = ${OPENGL_INCLUDE_DIRS} ")
+	set(USE_OPENGL_LIB TRUE)
   endif()
 
   find_package(GLEW REQUIRED) # First try to find using the find_package method (works with vcpkg)
   if(GLEW_FOUND) # Works with some other methods
   	message(STATUS "GLEW_INCLUDE_PATH=${GLEW_INCLUDE_PATH}")
   	message(STATUS "GLEW_LIBRARIES=${GLEW_LIBRARIES}")
+	set(USE_GLEW_LIB TRUE)
   endif()
   
   find_package(GLFW3 REQUIRED) # First try to find using the find_package method (works with vcpkg)
   if(GLFW_FOUND) # Works with some other methods
   	message(STATUS "GLFW3_INCLUDE_PATH=${GLFW3_INCLUDE_PATH}")
   	message(STATUS "GLFW_LIBRARIES=${GLFW_LIBRARIES}")
+	set(USE_GLFW3_LIB TRUE)
   endif()
   
   #message (STATUS "TINYLIB_HOME = ${${TINYLIB}_HOME}" )
@@ -251,13 +267,20 @@ endif ()
 
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${LIVE555} )
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${FFMPEG_LIBRARIES} )
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${AVDEVICE_LIBRARIES} )
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${SWSCALE_LIBRARIES} )
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
-if(USE_GLFW_LIB)
-target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLFW_LIBRARIES} )
+if(USE_GLEW_LIB)
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLEW_LIBRARIES} )
+endif ()
+
+if(USE_OPENGL_LIB)
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${OPENGL_LIBRARIES} )
+endif ()
+
+if(USE_GLFW3_LIB)
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLFW_LIBRARIES} )
 endif ()
 
 if(USE_SDL2_LIBS)
