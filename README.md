@@ -57,7 +57,7 @@ CMake projects should use: "-DCMAKE_TOOLCHAIN_FILE=D:/Tools/vcpkg/scripts/builds
 
 Install any packages for x86(x86-windows), x64(x64-windows), arm(arm-windows), arm64(arm64-winodws) windows with
 ```
-.\vcpkg install ffmpeg[core,avcodec,avdevice,avfilter,avformat,ffmpeg,ffplay,ffprobe,nvcodec,opencl,postproc,sdl2,swscale,nonfree]:x64-windows ffmpeg[core,avcodec,avdevice,avfilter,avformat,ffmpeg,ffplay,ffprobe,nvcodec,opencl,postproc,sdl2,swscale,nonfree]:x86-windows --recurse
+.\vcpkg install ffmpeg[core,avcodec,avdevice,avfilter,avutil,avformat,ffmpeg,ffplay,ffprobe,nvcodec,opencl,postproc,sdl2,swscale,swresample,nonfree,avresample,aac,h264,hevc,vp8,vp9]:x64-windows ffmpeg[core,avcodec,avdevice,avfilter,avutil,avformat,ffmpeg,ffplay,ffprobe,nvcodec,opencl,postproc,sdl2,swscale,swresample,nonfree,avresample,aac,h264,hevc,vp8,vp9]:x86-windows --recurse
 .\vcpkg install sdl2:x64-windows sdl2:x86-windows
 .\vcpkg install pthreads:x64-windows pthreads:x86-windows
 .\vcpkg install glew:x86-windows glew:x64-windows
