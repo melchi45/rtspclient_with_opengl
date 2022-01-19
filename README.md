@@ -87,7 +87,7 @@ sudo apt-get install -y mesa-common-dev
 sudo apt-get install -y libglu1-mesa-dev freeglut3-dev mesa-common-dev libgl1-mesa-dev
 sudo apt-get install -y libxi-dev build-essential libdbus-1-dev libfontconfig1-dev libfreetype6-dev libx11-dev
 sudo apt-get install -y libqt4-dev zlib1g-dev libqt4-opengl-dev libavcodec-dev libavformat-dev libavfilter-dev
-sudo apt-get install -y libsdl-dev libsdl-image1.2-dev libsdl2-dev libglew-dev
+sudo apt-get install -y libsdl-dev libsdl-image1.2-dev libsdl2-dev libglew-dev libglfw3-dev
 ```
 
 ### For FFMpeg
