@@ -57,11 +57,12 @@ CMake projects should use: "-DCMAKE_TOOLCHAIN_FILE=D:/Tools/vcpkg/scripts/builds
 
 Install any packages for x86(x86-windows), x64(x64-windows), arm(arm-windows), arm64(arm64-winodws) windows with
 ```
-.\vcpkg install ffmpeg[core,avcodec,avdevice,avfilter,avformat,ffmpeg,ffplay,ffprobe,nvcodec,opencl,postproc,sdl2,swscale,swresample,nonfree,avresample,x264,x265,openssl,opengl,openh264,vpx,vorbis,xml2,zlib,openjpeg]:x64-windows ffmpeg[core,avcodec,avdevice,avfilter,avformat,ffmpeg,ffplay,ffprobe,nvcodec,opencl,postproc,sdl2,swscale,swresample,nonfree,avresample,x264,x265,openssl,opengl,openh264,vpx,vorbis,xml2,zlib,openjpeg]:x86-windows --recurse
+.\vcpkg install ffmpeg:x64-windows ffmpeg:x86-windows --recurse
 .\vcpkg install sdl2:x64-windows sdl2:x86-windows
 .\vcpkg install pthreads:x64-windows pthreads:x86-windows
 .\vcpkg install glew:x86-windows glew:x64-windows
 .\vcpkg install glfw3:x86-windows glfw3:x64-windows
+.\vcpkg install libpng:x86-windows glfw3:x64-windows
 .\vcpkg install zlib:x86-windows zlib:x64-windows
 ```
 
@@ -86,39 +87,34 @@ sudo apt-get install -y libgl-dev
 sudo apt-get install -y mesa-common-dev
 sudo apt-get install -y libglu1-mesa-dev freeglut3-dev mesa-common-dev libgl1-mesa-dev
 sudo apt-get install -y libxi-dev build-essential libdbus-1-dev libfontconfig1-dev libfreetype6-dev libx11-dev
-sudo apt-get install -y libqt4-dev zlib1g-dev libqt4-opengl-dev libavcodec-dev libavformat-dev libavfilter-dev
-sudo apt-get install -y libsdl-dev libsdl-image1.2-dev libsdl2-dev libglew-dev libglfw3-dev
-sudo apt-get install -y ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev libavdevice-dev libavdevice-dev libavresample-dev libpostproc-dev libswresample-dev libswscale-dev
+sudo apt-get install -y libqt4-dev zlib1g-dev libqt4-opengl-dev
+sudo apt-get install -y libglew-dev libglfw3-dev
 ```
 
 ### For FFMpeg
 ```
 sudo apt-get install -y libavcodec-dev libavformat-dev libavdevice-dev
+sudo apt-get install -y ffmpeg libavcodec-dev libavutil-dev libavformat-dev libavfilter-dev libswscale-dev libavdevice-dev libavdevice-dev libavresample-dev libpostproc-dev libswresample-dev libswscale-dev
 ```
 
 ### For SDL2
 ```
-sudo apt-get install -y libsdl2-2.0 libsdl2-dev
+sudo apt-get install -y libsdl2-2.0 libsdl2-dev libsdl-dev libsdl-image1.2-dev
 ```
 
 ## Build for Windows
 
 Build with IDE
+You have to change vcpkg path[E:\Tools\vcpkg\installed\x64-windows-static] to your environment from the this line.
 ```
-mkdir build
-cd build
-cmake ..  -G "Visual Studio 15 2017" -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
+cmake -B x64 -G "Visual Studio 16 2019" -A x64 -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_PREFIX_PATH="E:\Tools\vcpkg\installed\x64-windows" -DUSE_SDL2_LIBS=ON -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install
+cmake --build x64 --config Release --target install
 ```
 
 Options
 You have to add vcpkg toolchain for ffmpeg, pthread
 ```
 -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake"
-```
-
-use static library option
-```
--DVCPKG_TARGET_TRIPLET=x86-windows-static
 ```
 
 build type
@@ -132,32 +128,21 @@ install path
 ```
 
 build without IDE tools
+If you remove the -G option, it will be generate cmake build environment. 
 ```
-cmake . -Bstatic -G "Visual Studio 15 2017" -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_INSTALL_PREFIX=install
-cmake --build static --config Release --target install
-```
-
-https://github.com/Microsoft/vcpkg/issues/703
-```
-cmake .. -Bstatic -G "Visual Studio 15 2017" -DCMAKE_BUILD_TYPE=Release -DVCPKG_TARGET_TRIPLET=x86-windows -DCMAKE_TOOLCHAIN_FILE="D:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake" 
-```
-
-for sdl2 dependency
-```
--DCMAKE_INSTALL_PREFIX=install -DCMAKE_CXX_STANDARD_LIBRARIES="user32.lib gdi32.lib winmm.lib imm32.lib ole32.lib oleaut32.lib version.lib uuid.lib dinput8.lib dxguid.lib dxerr.lib kernel32.lib winspool.lib shell32.lib comdlg32.lib advapi32.lib vcruntimed.lib ucrtd.lib"
+cmake -B windows -A x64 -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_PREFIX_PATH="E:\Tools\vcpkg\installed\x64-windows" -DUSE_SDL2_LIBS=ON -DVCPKG_TARGET_TRIPLET=x64-windows -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install
+cmake --build windows --config Release --target install
 ```
 
 ## Build for Linux
 ```
-mkdir linux
-cd linux
 export OUT_PATH=./install
 cmake .. -G "Unix Makefiles" \
-	-DBUILD_SHARED_LIBS=ON \
+	-DUSE_SDL2_LIBS=ON \
 	-DCMAKE_VERBOSE_MAKEFILE=ON \
-	-DCMAKE_BUILD_TYPE=release \
+	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_INSTALL_PREFIX=${OUT_PATH}
-make;make install
+cmake --build linux --config Release --target ${OUT_PATH}
 ```
 
 ## Executable binary
