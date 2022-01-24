@@ -149,7 +149,7 @@ void MediaH264MediaSink::afterGettingFrame(void* clientData, unsigned frameSize,
 }
 
 // If you don't want to see debugging output for each received frame, then comment out the following line:
-//#define DEBUG_PRINT_EACH_RECEIVED_FRAME 1
+#define DEBUG_PRINT_EACH_RECEIVED_FRAME 1
 #define DEBUG_PRINT_NPT 1
 
 char tempstr[1000] = { 0 };
@@ -189,9 +189,9 @@ void MediaH264MediaSink::afterGettingFrame(unsigned frameSize, unsigned numTrunc
   // We've just received a frame of data.  (Optionally) print out information about it:
 //  int nNALType = fReceiveBuffer[H264_NAL_HEADER_STARTCODE_LENGTH] & 0x1F;
 
-// if (isH264iFrame(fReceiveBuffer)) {
-//	  envir() << "I-Frame\n";
-//  }
+ if (isH264iFrame(fReceiveBuffer)) {
+	  envir() << "I-Frame\n";
+  }
 
   int start_code_length = 0;
   // check 3 byte start code
@@ -442,7 +442,8 @@ bool MediaH264MediaSink::isH264iFrame(u_int8_t* packet)
 	int start_bit = packet[RTPHeaderBytes + pos + 1] & 0x80;		// 1 bit
 	int reference_idc = packet[RTPHeaderBytes + pos + 1] & 0x60;	// 2 bit
 
-	envir() << "fragment_type: " << fragment_type << ", nal_type: " << nal_type << ", start_bit: " << start_bit << "\n";
+	//envir() << "fragment_type: " << fragment_type << ", nal_type: " << nal_type << ", start_bit: " << start_bit << "\n";
+	printf("fragment_type: %d, nal_type: %d, start_bit: %d\n", fragment_type, nal_type, start_bit);
 
 	if (((fragment_type == 28 || fragment_type == 29) && NALTYPE::NALTYPE_IDRPicture == nal_type && start_bit == 128) || fragment_type == 5)
 	{

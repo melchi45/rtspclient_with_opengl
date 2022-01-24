@@ -107,7 +107,8 @@ int H264ReadCameraEncoder::SetupCodec()
 
 	pCodecCtx->gop_size = 12; /* emit one intra frame every ten frames */
 	pCodecCtx->max_b_frames = 2;
-	pCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
+	// pCodecCtx->flags |= CODEC_FLAG_GLOBAL_HEADER;
+	pCodecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
 	if (codec_id == AV_CODEC_ID_H264) {
 		//av_opt_set(pCodecCtx->priv_data, "preset", "slow", 0);
@@ -308,6 +309,8 @@ int H264ReadCameraEncoder::ReadFrame()
 	catch (...)
 	{
 	}
+
+	return 0;
 }
 
 /// <summary>
@@ -362,7 +365,7 @@ int H264ReadCameraEncoder::WriteFrame(AVFrame* frame)
 		pthread_mutex_lock(&outqueue_mutex);
 
 		if (outqueue.size()<30) {
-			printf("complete add frame: %d", outqueue.size());
+			printf("complete add frame: %zd", outqueue.size());
 			outqueue.push(data);
 		} else {
 			delete data;
@@ -379,4 +382,6 @@ int H264ReadCameraEncoder::WriteFrame(AVFrame* frame)
 			onEncoded();
 		}
 	}
+
+	return 0;
 }

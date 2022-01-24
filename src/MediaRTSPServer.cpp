@@ -55,19 +55,22 @@ int ourSocket;
 MediaRTSPServer*
 MediaRTSPServer::createNew(UsageEnvironment& env, Port ourPort,
                              UserAuthenticationDatabase* authDatabase,
-                             unsigned reclamationTestSeconds)
+                             unsigned reclamationSeconds)
 {
-    ourSocket = setUpOurSocket(env, ourPort);
-    if (ourSocket == -1) return NULL;
-    return new MediaRTSPServer(env, ourSocket, ourPort, authDatabase, reclamationTestSeconds);
+  int ourSocketIPv4 = setUpOurSocket(env, ourPort, AF_INET);
+  int ourSocketIPv6 = setUpOurSocket(env, ourPort, AF_INET6);
+  if (ourSocketIPv4 < 0 && ourSocketIPv6 < 0) return NULL;
+
+  return new MediaRTSPServer(env, ourSocketIPv4, ourSocketIPv6, ourPort, authDatabase, reclamationSeconds);
 }
 
 static pthread_t rtos_event_thread;
 
-MediaRTSPServer::MediaRTSPServer(UsageEnvironment& env, int ourSocket,
-                                     Port ourPort,
-                                     UserAuthenticationDatabase* authDatabase, unsigned reclamationTestSeconds)
-    : RTSPServerSupportingHTTPStreaming(env, ourSocket, ourPort, authDatabase, reclamationTestSeconds)
+MediaRTSPServer::MediaRTSPServer(UsageEnvironment& env,
+            int ourSocketIPv4, int ourSocketIPv6, Port ourPort,
+            UserAuthenticationDatabase* authDatabase,
+            unsigned reclamationSeconds)
+    : RTSPServer(env, ourSocketIPv4, ourSocketIPv6, ourPort, authDatabase, reclamationSeconds)
 	, fRTSPClientConnection(0)
 	, fHave_amba_video(True)
 {
@@ -81,8 +84,11 @@ static ServerMediaSession* createNewSMS(UsageEnvironment& env,
                                         Boolean has_amba_audio, Boolean has_amba_video, Boolean has_amba_text,
                                         char const* fileName, FILE* fid); // forward
 
-ServerMediaSession* MediaRTSPServer
-::lookupServerMediaSession(char const* streamName, Boolean isFirstLookupInSession)
+void MediaRTSPServer
+::lookupServerMediaSession(char const* streamName,
+  lookupServerMediaSessionCompletionFunc* completionFunc,
+  void* completionClientData,
+  Boolean isFirstLookupInSession)
 {
     // First, check whether the specified "streamName" exists as a local file:
     FILE    *fid = (streamName[0] == '/') ? fopen(streamName, "rb") : NULL;
@@ -100,7 +106,7 @@ ServerMediaSession* MediaRTSPServer
 //    }
 
     // Next, check whether we already have a "ServerMediaSession" for this file:
-    ServerMediaSession* sms = RTSPServer::lookupServerMediaSession(streamName);
+    ServerMediaSession* sms = RTSPServer::getServerMediaSession(streamName);
     Boolean smsExists = (sms != NULL)? True:False;
     log_debug("smsExists = %d", smsExists);
 
@@ -118,7 +124,7 @@ ServerMediaSession* MediaRTSPServer
             {
                 removeServerMediaSession(sms);
                 log_rtsp("(PREVIOUS)removeServerMediaSession");
-                return NULL;
+                sms = NULL;
             }
 
             if( smsExists == False &&
@@ -159,7 +165,7 @@ ServerMediaSession* MediaRTSPServer
                     }
                 }
             }
-            return sms;
+            //return sms;
         }
 //#endif
         if (smsExists) {
@@ -168,7 +174,7 @@ ServerMediaSession* MediaRTSPServer
             log_debug("removeServerMediaSession");
             sms = NULL;
         }
-        return NULL;
+        sms = NULL;
     } else {
         if (smsExists && isFirstLookupInSession) {
             // Remove the existing "ServerMediaSession" and create a new one, in case the underlying
@@ -191,7 +197,11 @@ ServerMediaSession* MediaRTSPServer
         }
 
         fclose(fid);
-        return sms;
+        //return sms;
+    }
+
+    if (completionFunc != NULL) {
+      (*completionFunc)(completionClientData, sms);
     }
 }
 
@@ -392,8 +402,8 @@ static ServerMediaSession* createNewSMS(UsageEnvironment& env,
 }
 
 MediaRTSPServer::MediaRTSPClientConnection::MediaRTSPClientConnection(
-		RTSPServer& ourServer, int clientSocket, struct sockaddr_in clientAddr)
-: RTSPClientConnectionSupportingHTTPStreaming(ourServer, clientSocket, clientAddr)
+		RTSPServer& ourServer, int clientSocket, struct sockaddr_storage clientAddr)
+: RTSPClientConnection(ourServer, clientSocket, clientAddr)
 {
     log_rtsp("*********************************************************");
     log_rtsp("DynamicRTSPClientConnection::DynamicRTSPClientConnection");
@@ -549,13 +559,25 @@ void MediaRTSPServer::MediaRTSPClientSession::handleCmd_SET_PARAMETER(
  // If you subclass "RTSPClientConnection", then you must also redefine this virtual function in order
    // to create new objects of your subclass:
 GenericMediaServer::ClientConnection* MediaRTSPServer
-::createNewClientConnection(int clientSocket, struct sockaddr_in clientAddr)
+::createNewClientConnection(int clientSocket, struct sockaddr_storage const& clientAddr)
 {
 	int rval = -1;
 
-	log_rtsp("*********************************************************");
-	log_rtsp("DynamicRTSPServer::createNewClientConnection: %s", inet_ntoa(clientAddr.sin_addr));
-	log_rtsp("*********************************************************");
+  socklen_t client_len = sizeof(struct sockaddr_storage);
+
+  // Accept client request
+  int client_socket = accept(clientSocket, (struct sockaddr*)&clientAddr, &client_len);
+
+  char hoststr[NI_MAXHOST];
+  char portstr[NI_MAXSERV];
+
+  int rc = getnameinfo((struct sockaddr*)&clientAddr, client_len, hoststr, sizeof(hoststr), portstr, sizeof(portstr), NI_NUMERICHOST | NI_NUMERICSERV);
+  if (rc == 0) printf("New connection from %s %s", hoststr, portstr);
+  {
+    log_rtsp("*********************************************************");
+    log_rtsp("DynamicRTSPServer::createNewClientConnection: %s %s", hoststr, portstr);
+    log_rtsp("*********************************************************");
+  }
 
     return new MediaRTSPClientConnection(*this, clientSocket, clientAddr);
 }

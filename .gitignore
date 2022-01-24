@@ -3,3 +3,6 @@ linux
 build
 .vs
 CMakeSettings.json
+x64
+win32
+.vscode/*.log

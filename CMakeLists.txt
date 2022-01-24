@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.16)
 
 set ( PROJECT_NAME rtspclient_with_opengl )
 set ( TEST_DECODE testDecode )
@@ -51,53 +51,75 @@ set ( ${LIVE555}_BASIC_USAGE_ENVIRONMENT_HEADER_DIR ${${LIVE555}_HOME}/BasicUsag
 set ( ${LIVE555}_GROUP_SOCK_HEADER_DIR ${${LIVE555}_HOME}/groupsock/include )
 set ( ${LIVE555}_LIVE_MEDIA_HEADER_DIR ${${LIVE555}_HOME}/liveMedia/include )
 
-file(GLOB LIVE555_HEADER_FILES ${${LIVE555}_USAGE_ENVIRONMENT_HEADER_DIR} ${${LIVE555}_BASIC_USAGE_ENVIRONMENT_HEADER_DIR} 
+file(GLOB LIVE555_HEADER_FILES ${${LIVE555}_USAGE_ENVIRONMENT_HEADER_DIR} ${${LIVE555}_BASIC_USAGE_ENVIRONMENT_HEADER_DIR}
 ${${LIVE555}_GROUP_SOCK_HEADER_DIR} ${${LIVE555}_LIVE_MEDIA_HEADER_DIR} )
 
 message ( "LIVE555_HEADER_FILES = ${LIVE555_HEADER_FILES}" )
 
-#if ( WIN32 )
-set ( THREADS_USE_PTHREADS_WIN32 TRUE )
-find_package(Threads REQUIRED)
+if ( WIN32 )
+  set(THREADS_USE_PTHREADS_WIN32 true)
+endif ( WIN32 )
 
-message ( "THREADS_PTHREADS_INCLUDE_DIR = ${THREADS_PTHREADS_INCLUDE_DIR}" )
-message ( "THREADS_PTHREADS_WIN32_LIBRARY = ${THREADS_PTHREADS_WIN32_LIBRARY}" )
-message ( "CMAKE_THREAD_LIBS_INIT = ${CMAKE_THREAD_LIBS_INIT}" )
+find_package( Threads REQUIRED )
 
-#endif ( WIN32)
+if( Threads_FOUND )
+  message ( "found Threads" )
+  
+  message ( "CMAKE_USE_PTHREADS_INIT = ${CMAKE_USE_PTHREADS_INIT}")
+  message ( "CMAKE_USE_WIN32_THREADS_INIT = ${CMAKE_USE_WIN32_THREADS_INIT}")
+  message ( "THREADS_PTHREADS_INCLUDE_DIR = ${THREADS_PTHREADS_INCLUDE_DIR}")
+  message ( "THREADS_PTHREADS_WIN32_LIBRARY = ${THREADS_PTHREADS_WIN32_LIBRARY}")
 
-#include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
-#target_link_libraries(foo ${CMAKE_THREAD_LIBS_INIT})
+  message ( "CMAKE_THREAD_LIBS_INIT = ${CMAKE_THREAD_LIBS_INIT}")
+
+  if (CMAKE_USE_PTHREADS_INIT)
+    SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${CMAKE_THREAD_LIBS_INIT}")
+    message ( "change CMAKE_CXX_FLAGS flag to ${CMAKE_CXX_FLAGS}" )
+  elseif (CMAKE_USE_WIN32_THREADS_INIT)
+    include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
+    # target_link_libraries(${PROJECT_NAME} ${THREADS_PTHREADS_WIN32_LIBRARY})
+
+  endif ()
+
+endif ( Threads_FOUND )
+
+
+# include_directories(${THREADS_PTHREADS_INCLUDE_DIR})
+# target_link_libraries(foo ${CMAKE_THREAD_LIBS_INIT})
 
 #find_package(GLUT)
 
-find_package(FFmpeg REQUIRED)
+# unset(FFMPEG_LIBRARIES)
+# message(STATUS "FFMPEG_LIBRARIES in CMakeLists = ${FFMPEG_LIBRARIES}")
+
+# find_package(FFmpeg REQUIRED)
+find_package(FFmpeg COMPONENTS AVCODEC AVFORMAT AVUTIL AVDEVICE REQUIRED) #add here the list of ffmpeg components required
 if(FFMPEG_FOUND)
   message("Found FFMPEG/LibAV libraries")
   message("FFMPEG_INCLUDE_DIRS = ${FFMPEG_INCLUDE_DIRS} ")
   message("FFMPEG_LIBRARIES = ${FFMPEG_LIBRARIES} ")
   message("FFMPEG_DEFINITIONS = ${FFMPEG_DEFINITIONS} ")
-  
+
   if( SWSCALE_FOUND )
-	message("Found SWSCALE_LIBRARIES = ${SWSCALE_LIBRARIES}")
+	  message("Found SWSCALE_LIBRARIES = ${SWSCALE_LIBRARIES}")
   endif()
-  
+
   if( SWRESAMPLE_FOUND )
-	message("Found SWRESAMPLE_LIBRARIES = ${SWRESAMPLE_LIBRARIES}")
+	  message("Found SWRESAMPLE_LIBRARIES = ${SWRESAMPLE_LIBRARIES}")
   endif()
-  
+
   if( AVDEVICE_FOUND )
-	message("Found AVDEVICE_LIBRARIES = ${AVDEVICE_LIBRARIES}")
+	  message("Found AVDEVICE_LIBRARIES = ${AVDEVICE_LIBRARIES}")
   endif()
-  
+
   if( AVFILTER_FOUND )
-	message("Found AVFILTER_LIBRARIES = ${AVFILTER_LIBRARIES}")
+	  message("Found AVFILTER_LIBRARIES = ${AVFILTER_LIBRARIES}")
   endif()
-  
+
   if( POSTPROC_FOUND )
-	message("Found POSTPROC_LIBRARIES = ${POSTPROC_LIBRARIES}")
+	  message("Found POSTPROC_LIBRARIES = ${POSTPROC_LIBRARIES}")
   endif()
-else( FFMPEG_FOUND )
+else( NOT FFMPEG_FOUND )
     message(FATAL_ERROR "FFMPEG not found")
 endif( FFMPEG_FOUND )
 
@@ -107,35 +129,27 @@ endif( FFMPEG_FOUND )
 #	include_directories(${X264_INCLUDE_DIRS})
 #endif()
 
-if ( NOT DEFINED USE_SDL2_LIBS )
-   set ( USE_SDL2_LIBS TRUE )
+if ( DEFINED USE_SDL2_LIBS )
+  set ( USE_SDL2_LIBS TRUE )
+else()
+  set ( USE_GLFW3_LIB TRUE )
 endif ()
 
 if ( USE_SDL2_LIBS )
   message(STATUS "Use SDL2 Library for Renderer windows")
   set(USE_SDL2_LIBS TRUE)
+  set(SDL2_BUILDING_LIBRARY ON)
+
+  message(STATUS "SDL2_BUILDING_LIBRARY = ${SDL2_BUILDING_LIBRARY}")
   find_package(SDL2 REQUIRED)
   if(SDL2_FOUND)
     #include_directories(${SDL2_INCLUDE_DIR})
     message("Found SDL2 libraries")
     message("SDL2_INCLUDE_DIR = ${SDL2_INCLUDE_DIR} ")
     message("SDL2_LIBRARY = ${SDL2_LIBRARY} ")
+    message("SDL2MAIN_LIBRARY = ${SDL2MAIN_LIBRARY} ")
 	add_definitions(-DUSE_SDL2_LIB)
   endif ()
-  
-  find_package(OpenGL REQUIRED)
-  if(OPENGL_FOUND)
-    message("OPENGL_LIBRARIES = ${OPENGL_LIBRARIES} ")
-    message("OPENGL_INCLUDE_DIRS = ${OPENGL_INCLUDE_DIRS} ")
-	set(USE_OPENGL_LIB TRUE)
-  endif()
-  
-  find_package(GLEW REQUIRED) # First try to find using the find_package method (works with vcpkg)
-  if(GLEW_FOUND) # Works with some other methods
-  	message(STATUS "GLEW_INCLUDE_PATH=${GLEW_INCLUDE_PATH}")
-  	message(STATUS "GLEW_LIBRARIES=${GLEW_LIBRARIES}")
-	set(USE_GLEW_LIB TRUE)
-  endif()
 
   #find_package(SDL2_ttf REQUIRED)
   #include_directories(${SDL2_TTF_INCLUDE_DIR})
@@ -143,36 +157,37 @@ if ( USE_SDL2_LIBS )
   #find_package(SDL2_image REQUIRED)
   #include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 else ( )
-  set(USE_GLFW_LIB TRUE)
+  # set(USE_GLFW_LIB TRUE)
   message(STATUS "Use OpenGL/GLFW Library for Renderer windows")
   find_package(OpenGL REQUIRED)
   if(OPENGL_FOUND)
     message("OPENGL_LIBRARIES = ${OPENGL_LIBRARIES} ")
-    message("OPENGL_INCLUDE_DIRS = ${OPENGL_INCLUDE_DIRS} ")
-	set(USE_OPENGL_LIB TRUE)
+    message("OPENGL_INCLUDE_DIR = ${OPENGL_INCLUDE_DIR} ")
+    set(USE_OPENGL_LIB TRUE)
   endif()
 
+  set(GLEW_VERBOSE TRUE)
   find_package(GLEW REQUIRED) # First try to find using the find_package method (works with vcpkg)
   if(GLEW_FOUND) # Works with some other methods
-  	message(STATUS "GLEW_INCLUDE_PATH=${GLEW_INCLUDE_PATH}")
-  	message(STATUS "GLEW_LIBRARIES=${GLEW_LIBRARIES}")
-	set(USE_GLEW_LIB TRUE)
+    message(STATUS "GLEW_INCLUDE_DIRS=${GLEW_INCLUDE_DIRS}")
+    # message(STATUS "GLEW::GLEW=${GLEW::GLEW}")
+    set(USE_GLEW_LIB TRUE)
   endif()
-  
-  find_package(GLFW3 REQUIRED) # First try to find using the find_package method (works with vcpkg)
+
+  find_package(GLFW REQUIRED) # First try to find using the find_package method (works with vcpkg)
   if(GLFW_FOUND) # Works with some other methods
-  	message(STATUS "GLFW3_INCLUDE_PATH=${GLFW3_INCLUDE_PATH}")
+  	message(STATUS "GLFW_INCLUDE_DIRS=${GLFW_INCLUDE_DIRS}")
   	message(STATUS "GLFW_LIBRARIES=${GLFW_LIBRARIES}")
 	set(USE_GLFW3_LIB TRUE)
   endif()
-  
+
   #message (STATUS "TINYLIB_HOME = ${${TINYLIB}_HOME}" )
   find_path(
     TINYLIB_INCLUDE_DIR
     NAMES "tinylib.h"
     PATHS "${${TINYLIB}_HOME}/src"
   )
-  
+
   # Define GLFW_LIBRARIES and GLFW_INCLUDE_DIRS
   if ( DEFINED TINYLIB_INCLUDE_DIR )
   	set(TINYLIB_INCLUDE_DIRS ${TINYLIB_INCLUDE_DIR})
@@ -182,13 +197,13 @@ else ( )
   	add_definitions(-DROXLU_USE_OPENGL)
   	add_definitions(-DROXLU_IMPLEMENTATION)
   	message(STATUS "TINYLIB_INCLUDE_DIRS include dir = ${TINYLIB_INCLUDE_DIRS}")
-	
+
 	find_package(PNG REQUIRED)
 	if(PNG_FOUND)
       message(STATUS "PNG library = ${PNG_LIBRARIES}")
 	endif()
   endif()
- 
+
   add_definitions(-DUSE_GLFW_LIB)
 endif ( )
 
@@ -250,7 +265,11 @@ source_group("Source Files" FILES ${SRC_FILES})
 source_group("Header Files" FILES ${HDR_FILES})
 
 # build target
+# if(WIN32)
+# add_executable(${PROJECT_NAME} WIN32 ${SRC_FILES} ${HDR_FILES})
+# else()
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HDR_FILES})
+# endif()
 
 target_include_directories( ${PROJECT_NAME} PRIVATE ${LIVE555_HEADER_FILES} )
 target_include_directories( ${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS} )
@@ -258,7 +277,7 @@ target_include_directories( ${PROJECT_NAME} PRIVATE ${THREADS_PTHREADS_INCLUDE_D
 
 if(USE_GLFW_LIB)
 target_include_directories( ${PROJECT_NAME} PRIVATE ${${TINYLIB}_HOME}/src )
-target_include_directories( ${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIRS} )
+target_include_directories( ${PROJECT_NAME} PRIVATE ${OPENGL_INCLUDE_DIR} )
 endif ()
 
 if(USE_SDL2_LIBS)
@@ -269,22 +288,27 @@ target_link_libraries( ${PROJECT_NAME} PRIVATE ${LIVE555} )
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${FFMPEG_LIBRARIES} )
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${AVDEVICE_LIBRARIES} )
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${SWSCALE_LIBRARIES} )
-target_link_libraries( ${PROJECT_NAME} PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-
-if(USE_GLEW_LIB)
-target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLEW_LIBRARIES} )
+if ( CMAKE_USE_WIN32_THREADS_INIT)
+target_link_libraries( ${PROJECT_NAME} PRIVATE ${THREADS_PTHREADS_WIN32_LIBRARY})
+elseif (CMAKE_USE_PTHREADS_INIT)
+target_link_libraries( ${PROJECT_NAME} PRIVATE Threads::Threads)
 endif ()
+
+
 
 if(USE_OPENGL_LIB)
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${OPENGL_LIBRARIES} )
 endif ()
 
-if(USE_GLFW3_LIB)
-target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLFW_LIBRARIES} )
+if(USE_GLFW3_LIB AND GLFW_FOUND AND GLEW_FOUND)
+  target_link_libraries( ${PROJECT_NAME} PRIVATE ${GLFW_LIBRARIES} GLEW::glew)
+  message(STATUS "add glfw3 and glew library ${GLFW_LIBRARIES} ${GLEW_LIBRARIES}")
 endif ()
 
-if(USE_SDL2_LIBS)
+if(USE_SDL2_LIBS AND SDL2_FOUND)
 target_link_libraries( ${PROJECT_NAME} PRIVATE ${SDL2_LIBRARY} )
+message(STATUS "add sdl2 library ${SDL2_LIBRARY}")
+# target_link_libraries( ${PROJECT_NAME} PRIVATE ${SDL2_LIBRARY} ${SDL2MAIN_LIBRARY})
 endif ()
 
 if(PNG_FOUND)
@@ -329,7 +353,7 @@ if (EXECUTE_RTSP_CLIENT)
 add_custom_command (
     TARGET ${PROJECT_NAME}
     POST_BUILD
-    COMMAND ${PROJECT_NAME} -r rtsp://192.168.123.37/profile5/media.smp -u admin 1
+    COMMAND ${PROJECT_NAME} -r rtsp://192.168.38.28/0/H.264/media.smp -u admin 5tkatjd!
     COMMENT "Execute ${PROJECT_NAME}"
 )
 endif ()

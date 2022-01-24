@@ -47,8 +47,8 @@ H264Decoder::H264Decoder(UsageEnvironment &env)
 	: FFMpeg(env)
 {
 	codec_id = AV_CODEC_ID_H264;
-	dstWidth = 640;
-	dstHeight = 320;
+	dstWidth = 608;
+	dstHeight = 800;
 
 	intialize();
 }

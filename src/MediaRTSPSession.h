@@ -59,8 +59,8 @@ typedef enum screen_ratio {
 	UHD_8K
 } SCREEN_RATIO;
 
-//#define WINDOWS_WIDTH	320
-//#define WINDOWS_HEIGHT	160
+#define WINDOWS_WIDTH	320
+#define WINDOWS_HEIGHT	160
 
 #if defined(USE_GLFW_LIB)
 // reference
@@ -74,6 +74,7 @@ typedef enum screen_ratio {
 #include <GLFW/glfw3.h>
 #elif defined(USE_SDL2_LIB)
 #include <SDL2/SDL.h>
+#undef main
 #endif
 
 class TaskScheduler;

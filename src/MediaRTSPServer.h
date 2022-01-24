@@ -38,7 +38,7 @@
 #include <string>
 
 #ifndef _RTSP_SERVER_SUPPORTING_HTTP_STREAMING_HH
-#include "RTSPServerSupportingHTTPStreaming.hh"
+#include "RTSPServer.hh"
 #endif
 
 #define LIVE_VEIW_NAME      "live"
@@ -52,21 +52,27 @@
  * It also adds the capability to set the maximum number of connected clients.
  * It adds the ability to kick clients off the server.
  */
-class MediaRTSPServer: public RTSPServerSupportingHTTPStreaming
+class MediaRTSPServer: public RTSPServer
 {
 public:
-    static MediaRTSPServer* createNew(UsageEnvironment& env, Port ourPort,
-                                        UserAuthenticationDatabase* authDatabase,
-                                        unsigned reclamationTestSeconds = 65);
+    static MediaRTSPServer* createNew(UsageEnvironment& env, Port ourPort = 554,
+                                        UserAuthenticationDatabase* authDatabase = NULL,
+                                        unsigned reclamationSeconds = 65);
 
 protected:
-	MediaRTSPServer(UsageEnvironment& env, int ourSocket, Port ourPort,
-                      UserAuthenticationDatabase* authDatabase, unsigned reclamationTestSeconds);
+	MediaRTSPServer(UsageEnvironment& env,
+			int ourSocketIPv4, int ourSocketIPv6, Port ourPort,
+			UserAuthenticationDatabase* authDatabase,
+			unsigned reclamationSeconds);
     // called only by createNew();
     virtual ~MediaRTSPServer();
 
 private: // redefined virtual functions
-    virtual ServerMediaSession* lookupServerMediaSession(char const* streamName, Boolean isFirstLookupInSession);
+    //virtual ServerMediaSession* lookupServerMediaSession(char const* streamName, Boolean isFirstLookupInSession);
+		virtual void lookupServerMediaSession(char const* streamName,
+			lookupServerMediaSessionCompletionFunc* completionFunc,
+			void* completionClientData,
+			Boolean isFirstLookupInSession);
 
 protected:
     // reference url:
@@ -75,14 +81,14 @@ protected:
     /**
       * @brief Subclassing this to make the client address acessible and add handleCmd_notEnoughBandwidth.
       */
-    class MediaRTSPClientConnection : public RTSPClientConnectionSupportingHTTPStreaming {
+    class MediaRTSPClientConnection : public RTSPClientConnection {
     friend class MediaRTSPServer;
 	friend class MediaRTSPClientSession;
 	public:
 		/**
 		* @brief Constructor
 		*/
-		MediaRTSPClientConnection(RTSPServer& ourServer, int clientSocket, struct sockaddr_in clientAddr);
+		MediaRTSPClientConnection(RTSPServer& ourServer, int clientSocket, struct sockaddr_storage clientAddr);
 		/**
 		* @brief Destructor
 		*/
@@ -91,7 +97,7 @@ protected:
 		/**
 		 * @brief Getter for client address
 		 */
-		struct sockaddr_in getClientAddr() const { return fClientAddr; }
+		struct sockaddr_storage getClientAddr() const { return fClientAddr; }
 
 		virtual void handleRequestBytes(int newBytesRead);
 
@@ -177,7 +183,7 @@ protected:
 
 	// If you subclass "RTSPClientConnection", then you must also redefine this virtual function in order
 	// to create new objects of your subclass:
-	virtual ClientConnection* createNewClientConnection(int clientSocket, struct sockaddr_in clientAddr);
+	virtual ClientConnection* createNewClientConnection(int clientSocket, struct sockaddr_storage const& clientAddr);
 
 	// If you subclass "RTSPClientSession", then you must also redefine this virtual function in order
 	// to create new objects of your subclass:

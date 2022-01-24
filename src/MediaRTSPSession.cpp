@@ -40,6 +40,7 @@
 #include "MediaRTSPServer.h"
 #include "DummySink.h"
 #include "MediaH264MediaSink.h"
+#include "MediaH265MediaSink.h"
 #include "liveMedia.hh"
 #include "log_utils.h"
 #include "Frame.h"
@@ -1249,8 +1250,8 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 			break;
 		}
 
-//		env << *rtspClient << "Set up the \"" << *scs.subsession 
-//			<< "\" subsession (client ports " << scs.subsession->clientPortNum() << "-" << scs.subsession->clientPortNum() + 1 << ")\n";
+		env << *rtspClient << "Set up the \"" << *scs.subsession 
+			<< "\" subsession (client ports " << scs.subsession->clientPortNum() << "-" << scs.subsession->clientPortNum() + 1 << ")\n";
 
 		// Having successfully setup the subsession, create a data sink for it, and call "startPlaying()" on it.
 		// (This will prepare the data sink to receive data; the actual flow of data from the client won't start happening until later,
@@ -1323,6 +1324,105 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
 
 					// Create the data source: an "H264 Video RTP source"
 					//RTPSource* mVideoReceiverSource = H264VideoRTPSource::createNew(env, scs.subsession->rtpSource()->RTPgs(), scs.subsession->rtpPayloadFormat(), 90000);
+
+					if (!scs.subsession->sink->startPlaying(*(scs.subsession->readSource()),
+						subsessionAfterPlaying, scs.subsession)) {
+						env << *rtspClient << "Failed to start video play for the \"" << *scs.subsession
+							<< "\" subsession: " << env.getResultMsg() << "\n";
+						break;
+					}
+					// Also set a handler to be called if a RTCP "BYE" arrives for this subsession:
+					if (scs.subsession->rtcpInstance() != NULL) {
+						scs.subsession->rtcpInstance()->setByeHandler(subsessionByeHandler, scs.subsession);
+					}
+					// Set receiver buffer size
+					if (scs.subsession->rtpSource()) {
+						int newsz;
+						newsz = increaseReceiveBufferTo(env,
+							scs.subsession->rtpSource()->RTPgs()->socketNum(), RCVBUF_SIZE);
+						env << "Receiver buffer increased to " << newsz << "\n";
+					}
+					// TODO: Initialize video decoder
+
+					// reference http://blog.chinaunix.net/uid-15063109-id-4482932.html
+				}
+
+				if ((strcmp(scs.subsession->codecName(), "H265") == 0)) {
+					//char vparam[1024];
+					//snprintf(vparam, sizeof(vparam), "%s,%s,%s",
+					//	scs.subsession->fmtp_spropvps() == NULL ? "" : scs.subsession->fmtp_spropvps(),
+					//	scs.subsession->fmtp_spropsps() == NULL ? "" : scs.subsession->fmtp_spropsps(),
+					//	scs.subsession->fmtp_sproppps() == NULL ? "" : scs.subsession->fmtp_sproppps());
+
+					//const char *sprop = scs.subsession->fmtp_spropparametersets();
+
+					///*const char *sprop = vparam;*/
+					//u_int8_t const* vps = NULL;
+					//unsigned vpsSize = 0;
+					//u_int8_t const* sps = NULL;
+					//unsigned spsSize = 0;
+					//u_int8_t const* pps = NULL;
+					//unsigned ppsSize = 0;
+
+					//if (sprop != NULL) {
+					//	unsigned int numSPropRecords;
+					//	SPropRecord* sPropRecords = parseSPropParameterSets(sprop, numSPropRecords);
+					//	for (unsigned i = 0; i < numSPropRecords; ++i) {
+					//		if (sPropRecords[i].sPropLength == 0) continue; // bad data
+					//		u_int8_t nal_unit_type = (sPropRecords[i].sPropBytes[0]) & 0x3F;
+					//		if (nal_unit_type == 32/*VPS*/) {
+					//			vps = sPropRecords[i].sPropBytes;
+					//			vpsSize = sPropRecords[i].sPropLength;
+					//		}else if (nal_unit_type == 33/*SPS*/) {
+					//			sps = sPropRecords[i].sPropBytes;
+					//			spsSize = sPropRecords[i].sPropLength;
+					//		}
+					//		else if (nal_unit_type == 34/*PPS*/) {
+					//			pps = sPropRecords[i].sPropBytes;
+					//			ppsSize = sPropRecords[i].sPropLength;
+					//		}
+					//	}
+					//}
+
+					scs.subsession->sink = MediaH265MediaSink::createNew(env, rtspClient, *scs.subsession, rtspClient->url());
+					/*scs.subsession->sink = MediaH264VideoRTPSink::createNew(env,
+						scs.subsession,
+						sps, spsSize, pps, ppsSize,
+						rtspClient->url());*/
+						/*scs.subsession->sink = H264VideoRTPSink::createNew(env,
+							scs.subsession->rtpSource()->RTPgs(), scs.subsession->rtpPayloadFormat(),
+							scs.subsession->fmtp_spropparametersets());*/
+							// perhaps use your own custom "MediaSink" subclass instead
+					if (scs.subsession->sink == NULL) {
+						env << *rtspClient << "Failed to create a video data sink for the \"" << *scs.subsession
+							<< "\" subsession: " << env.getResultMsg() << "\n";
+						break;
+					}
+#if 0
+					FFmpegDecoder* decoder = ((MediaH264MediaSink*)scs.subsession->sink)->getDecoder(); // alias
+					if (decoder == NULL) {
+						env << "Failed to get a video decoder\n";
+						break;
+					}
+					decoder->openDecoder(1920, 1080, ((MediaRTSPClient*)rtspClient)->getRTSPSession());
+#else
+					H264Decoder* decoder = ((MediaH265MediaSink*)scs.subsession->sink)->getDecoder(); // alias
+					if (decoder == NULL) {
+						env << "Failed to get a video decoder\n";
+						break;
+					}
+					decoder->setListener(((MediaRTSPClient*)rtspClient)->getRTSPSession());
+					decoder->setRescaleSize(windows_width, windows_height); //set decode size
+#endif
+
+//					scs.subsession->videoWidth();
+//					scs.subsession->videoHeight();
+
+					env << *rtspClient << "Created a video data sink for the \"" << *scs.subsession << "\" subsession\n";
+					scs.subsession->miscPtr = rtspClient; // a hack to let subsession handle functions get the "RTSPClient" from the subsession 
+
+					// Create the data source: an "H265 Video RTP source"
+					//RTPSource* mVideoReceiverSource = H265VideoRTPSource::createNew(env, scs.subsession->rtpSource()->RTPgs(), scs.subsession->rtpPayloadFormat(), 90000);
 
 					if (!scs.subsession->sink->startPlaying(*(scs.subsession->readSource()),
 						subsessionAfterPlaying, scs.subsession)) {
