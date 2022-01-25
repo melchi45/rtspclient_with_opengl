@@ -22,9 +22,7 @@ jobs:
 
     - name: Install requirement package
       run: 
-        sudo apt update
-        sudo apt install -y libxi-dev build-essential libdbus-1-dev libfontconfig1-dev libfreetype6-dev libx11-dev
-        sudo apt install -y libgl-dev
+        sudo apt install -y libxi-dev build-essential libdbus-1-dev libfontconfig1-dev libfreetype6-dev libx11-dev libgl-dev
 #        sudo apt-get install -y mesa-common-dev
 #        sudo apt-get install -y zlib1g-dev libqt4-opengl-dev
 #        sudo apt-get install -y libglew-dev libglfw3-dev
