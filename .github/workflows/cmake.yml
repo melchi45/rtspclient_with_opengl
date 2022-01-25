@@ -20,6 +20,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Update package
+      run: 
+        sudo apt update
+
     - name: Install requirement package
       run: 
         sudo apt install -y libxi-dev build-essential libdbus-1-dev libfontconfig1-dev libfreetype6-dev libx11-dev libgl-dev
@@ -29,9 +33,7 @@ jobs:
         
     - name: Install OpenGL package
       run: 
-        sudo apt install -y libgl-dev
-        sudo apt install -y libglu1-mesa-dev freeglut3-dev mesa-common-dev libgl1-mesa-dev
-        sudo apt install -y libglew-dev libglfw3-dev        
+        sudo apt install -y libgl-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libgl1-mesa-dev libglew-dev libglfw3-dev        
         
     - name: Install FFMpeg package
       run: 
