@@ -41,7 +41,7 @@ jobs:
 
     - name: Install SDL2 package
       run: 
-        sudo apt install -y libsdl2-2.0 libsdl2-dev libsdl-dev libsdl-image1.2-dev
+        sudo apt install -y libsdl2-dev libsdl-dev libsdl-image1.2-dev
 
 
     - name: Configure CMake
